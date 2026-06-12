@@ -1,20 +1,20 @@
-LOGIXFLOW
+🚚 LOGIXFLOW
 
 Sistema profissional de gestão de frotas desenvolvido com Next.js 15, TypeScript, Tailwind CSS e Supabase.
 
-Visão Geral
+📋 Visão Geral
 
 O LOGIXFLOW é uma plataforma para gerenciamento de:
 
-Veículos
-Motoristas
-Viagens
-Manutenções
-Abastecimentos
+🚛 Veículos
+👨‍✈️ Motoristas
+🗺️ Viagens
+🔧 Manutenções
+⛽ Abastecimentos
 
 O sistema utiliza o Supabase como banco de dados e sincronização em tempo real.
 
-Tecnologias Utilizadas
+🚀 Tecnologias Utilizadas
 Next.js 15
 React
 TypeScript
@@ -22,13 +22,13 @@ Tailwind CSS
 Supabase
 Realtime
 Lucide React
-Funcionalidades
+📊 Funcionalidades
 Dashboard
 Quantidade de veículos
 Quantidade de motoristas
 Viagens em andamento
-Manutenções
-Abastecimentos
+Manutenções registradas
+Abastecimentos realizados
 Frota
 Visualização dos veículos cadastrados
 Atualização automática em tempo real
@@ -42,7 +42,7 @@ Manutenções
 Histórico de manutenção da frota
 Abastecimentos
 Registro e acompanhamento dos abastecimentos
-Banco de Dados
+🗄️ Banco de Dados
 
 Tabelas principais:
 
@@ -54,14 +54,14 @@ abastecimentos
 
 Todas as tabelas possuem sincronização Realtime via Supabase.
 
-Estrutura do Projeto
+📁 Estrutura do Projeto
 app/
 components/
 lib/
 services/
 types/
 public/
-Instalação
+⚙️ Instalação
 
 Clone o repositório:
 
@@ -78,7 +78,7 @@ npm install
 Execute o projeto:
 
 npm run dev
-Variáveis de Ambiente
+🔐 Variáveis de Ambiente
 
 Crie um arquivo:
 
@@ -88,14 +88,18 @@ Adicione:
 
 NEXT_PUBLIC_SUPABASE_URL=SEU_SUPABASE_URL
 NEXT_PUBLIC_SUPABASE_ANON_KEY=SUA_CHAVE_PUBLICA
-Repositório
+📦 Repositório
 
 https://github.com/awaldige/logixflow
 
-Autor
+👨‍💻 Autor
 
 André Waldige
 
-Licença
+📄 Licença
 
 Projeto de uso privado.
+
+LOGIXFLOW © 2026
+
+Sistema de Gestão de Frotas
