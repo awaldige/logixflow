@@ -116,29 +116,39 @@ export default function Frota() {
     setModalOpen(true)
   }
 
-  async function saveVehicle() {
-    try {
+ async function saveVehicle() {
 
-      if (editId) {
-        await supabase
-          .from('veiculos')
-          .update(form)
-          .eq('id', editId)
-      } else {
-        await supabase
-          .from('veiculos')
-          .insert([form])
-      }
+  let response
 
-      setModalOpen(false)
-      resetForm()
-      setEditId(null)
-      fetchData()
+  if (editId) {
 
-    } catch (error) {
-      console.error('Erro ao salvar veículo:', error)
-    }
+    response = await supabase
+      .from('veiculos')
+      .update(form)
+      .eq('id', editId)
+
+  } else {
+
+    response = await supabase
+      .from('veiculos')
+      .insert([form])
+
   }
+
+  console.log(response)
+
+  if (response.error) {
+    console.error(response.error)
+    alert(response.error.message)
+    return
+  }
+
+  setModalOpen(false)
+  resetForm()
+  setEditId(null)
+
+  fetchData()
+}
 
   async function deleteVehicle(id: number) {
     if (!confirm('Deseja excluir este veículo?')) return
