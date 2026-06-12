@@ -300,6 +300,17 @@ export default function Frota() {
         value={form.marca}
         onChange={e => setForm({ ...form, marca: e.target.value })}
       />
+      <input
+  className="w-full p-3 rounded bg-zinc-800 text-white"
+  placeholder="Tipo do veículo"
+  value={form.tipo}
+  onChange={e =>
+    setForm({
+      ...form,
+      tipo: e.target.value
+    })
+  }
+/>
 
      <div className="space-y-1">
   <label className="text-zinc-400 text-sm">
