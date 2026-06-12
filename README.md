@@ -1,36 +1,101 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+LOGIXFLOW
 
-## Getting Started
+Sistema profissional de gestão de frotas desenvolvido com Next.js 15, TypeScript, Tailwind CSS e Supabase.
 
-First, run the development server:
+Visão Geral
 
-```bash
+O LOGIXFLOW é uma plataforma para gerenciamento de:
+
+Veículos
+Motoristas
+Viagens
+Manutenções
+Abastecimentos
+
+O sistema utiliza o Supabase como banco de dados e sincronização em tempo real.
+
+Tecnologias Utilizadas
+Next.js 15
+React
+TypeScript
+Tailwind CSS
+Supabase
+Realtime
+Lucide React
+Funcionalidades
+Dashboard
+Quantidade de veículos
+Quantidade de motoristas
+Viagens em andamento
+Manutenções
+Abastecimentos
+Frota
+Visualização dos veículos cadastrados
+Atualização automática em tempo real
+Motoristas
+Controle dos motoristas cadastrados
+Atualização automática em tempo real
+Viagens
+Controle das viagens
+Monitoramento das viagens em andamento
+Manutenções
+Histórico de manutenção da frota
+Abastecimentos
+Registro e acompanhamento dos abastecimentos
+Banco de Dados
+
+Tabelas principais:
+
+veiculos
+motoristas
+viagens
+manutencoes
+abastecimentos
+
+Todas as tabelas possuem sincronização Realtime via Supabase.
+
+Estrutura do Projeto
+app/
+components/
+lib/
+services/
+types/
+public/
+Instalação
+
+Clone o repositório:
+
+git clone https://github.com/awaldige/logixflow.git
+
+Entre na pasta:
+
+cd logixflow
+
+Instale as dependências:
+
+npm install
+
+Execute o projeto:
+
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+Variáveis de Ambiente
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Crie um arquivo:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+.env.local
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Adicione:
 
-## Learn More
+NEXT_PUBLIC_SUPABASE_URL=SEU_SUPABASE_URL
+NEXT_PUBLIC_SUPABASE_ANON_KEY=SUA_CHAVE_PUBLICA
+Repositório
 
-To learn more about Next.js, take a look at the following resources:
+https://github.com/awaldige/logixflow
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Autor
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+André Waldige
 
-## Deploy on Vercel
+Licença
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Projeto de uso privado.
