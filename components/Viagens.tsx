@@ -298,34 +298,49 @@ export default function Viagens() {
                 value={form.destino}
                 onChange={e => setForm({ ...form, destino: e.target.value })}
               />
+<div>
+  <label className="text-zinc-400 text-xs ml-1">
+    Motorista
+  </label>
+
+  <select
+    className="w-full p-3 rounded-xl bg-zinc-800 text-white border border-zinc-700"
+    value={form.motorista_id}
+    onChange={e =>
+      setForm({ ...form, motorista_id: Number(e.target.value) })
+    }
+  >
+    <option value={0}>Selecione um motorista</option>
+
+    {motoristas.map((m) => (
+      <option key={m.id} value={m.id}>
+        🚗 {m.nome}
+      </option>
+    ))}
+  </select>
+</div>
 
               <div>
-                <label className="text-zinc-400 text-xs ml-1">Motorista *</label>
-                <select
-                  className="w-full p-3 rounded-xl bg-zinc-800 text-white border border-zinc-700 focus:outline-none focus:border-blue-500"
-                  value={form.motorista_id}
-                  onChange={e => setForm({ ...form, motorista_id: Number(e.target.value) })}
-                >
-                  <option value={0}>Selecione um motorista</option>
-                  {motoristas.map((m) => (
-                    <option key={m.id} value={m.id}>{m.nome}</option>
-                  ))}
-                </select>
-              </div>
+  <label className="text-zinc-400 text-xs ml-1">
+    Veículo
+  </label>
 
-              <div>
-                <label className="text-zinc-400 text-xs ml-1">Veículo *</label>
-                <select
-                  className="w-full p-3 rounded-xl bg-zinc-800 text-white border border-zinc-700 focus:outline-none focus:border-blue-500"
-                  value={form.veiculo_id}
-                  onChange={e => setForm({ ...form, veiculo_id: Number(e.target.value) })}
-                >
-                  <option value={0}>Selecione um veículo</option>
-                  {veiculos.map((v) => (
-                    <option key={v.id} value={v.id}>{v.nome}</option>
-                  ))}
-                </select>
-              </div>
+  <select
+    className="w-full p-3 rounded-xl bg-zinc-800 text-white border border-zinc-700"
+    value={form.veiculo_id}
+    onChange={e =>
+      setForm({ ...form, veiculo_id: Number(e.target.value) })
+    }
+  >
+    <option value={0}>Selecione um veículo</option>
+
+    {veiculos.map((v) => (
+      <option key={v.id} value={v.id}>
+        🚛 {v.nome}
+      </option>
+    ))}
+  </select>
+</div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
