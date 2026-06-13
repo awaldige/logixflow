@@ -44,8 +44,9 @@ export default function Motoristas() {
         .order('nome')
 
       if (error) {
-        console.error('Erro ao buscar motoristas:', error.message)
+        console.error('Erro ao buscar motoristas:', error.message)        
         return
+        alert(JSON.stringify(error, null, 2))
       }
 
       setMotoristas(data || [])
