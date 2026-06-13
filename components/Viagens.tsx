@@ -62,11 +62,11 @@ export default function Viagens() {
     try {
       const { data, error } = await supabase
         .from('viagens')
-        .select(`
-          *,
-          motoristas ( nome ),
-          veiculos ( nome )
-        `)
+       .select(`
+  *,
+  motoristas:motorista_id ( nome ),
+  veiculos:veiculo_id ( nome )
+`)
         .order('data_saida', { ascending: false })
 
       if (error) throw error
