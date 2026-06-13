@@ -281,83 +281,74 @@ export default function Viagens() {
       )}
 
       {/* MODAL */}
-      {modalOpen && (
-  <div className="fixed inset-0 bg-black/70 flex items-center justify-center">
-
-    <div className="bg-zinc-900 p-6 rounded-3xl w-[90%] max-w-xl space-y-4">
-
-      <h2 className="text-2xl font-black text-white">
-        {editId ? 'Editar Viagem' : 'Nova Viagem'}
-      </h2>
-
       {/* ORIGEM */}
-      <div className="space-y-1">
-        <label className="text-zinc-400 text-sm">Origem</label>
-        <input
-          className="w-full p-3 rounded bg-zinc-800 text-white"
-          placeholder="Ex: São Paulo"
-          value={form.origem}
-          onChange={e => setForm({ ...form, origem: e.target.value })}
-        />
-      </div>
+<input
+  className="w-full p-3 rounded bg-zinc-800 text-white"
+  placeholder="Origem"
+  value={form.origem}
+  onChange={e => setForm({ ...form, origem: e.target.value })}
+/>
 
-      {/* DESTINO */}
-      <div className="space-y-1">
-        <label className="text-zinc-400 text-sm">Destino</label>
-        <input
-          className="w-full p-3 rounded bg-zinc-800 text-white"
-          placeholder="Ex: Rio de Janeiro"
-          value={form.destino}
-          onChange={e => setForm({ ...form, destino: e.target.value })}
-        />
-      </div>
+{/* DESTINO */}
+<input
+  className="w-full p-3 rounded bg-zinc-800 text-white"
+  placeholder="Destino"
+  value={form.destino}
+  onChange={e => setForm({ ...form, destino: e.target.value })}
+/>
 
-      {/* VEÍCULO ID */}
-      <div className="space-y-1">
-        <label className="text-zinc-400 text-sm">ID do veículo</label>
-        <input
-          className="w-full p-3 rounded bg-zinc-800 text-white"
-          placeholder="Ex: 1"
-          type="number"
-          value={form.veiculo_id}
-          onChange={e => setForm({ ...form, veiculo_id: Number(e.target.value) })}
-        />
-      </div>
+{/* MOTORISTA */}
+<div>
+  <label className="text-zinc-400 text-sm">Motorista</label>
+  <select
+    className="w-full p-3 rounded bg-zinc-800 text-white"
+    value={form.motorista_id}
+    onChange={e => setForm({ ...form, motorista_id: Number(e.target.value) })}
+  >
+    <option value="">Selecione um motorista</option>
+    {motoristas.map((m) => (
+      <option key={m.id} value={m.id}>
+        {m.nome}
+      </option>
+    ))}
+  </select>
+</div>
 
-      {/* MOTORISTA ID */}
-      <div className="space-y-1">
-        <label className="text-zinc-400 text-sm">ID do motorista</label>
-        <input
-          className="w-full p-3 rounded bg-zinc-800 text-white"
-          placeholder="Ex: 3"
-          type="number"
-          value={form.motorista_id}
-          onChange={e => setForm({ ...form, motorista_id: Number(e.target.value) })}
-        />
-      </div>
+{/* VEÍCULO */}
+<div>
+  <label className="text-zinc-400 text-sm">Veículo</label>
+  <select
+    className="w-full p-3 rounded bg-zinc-800 text-white"
+    value={form.veiculo_id}
+    onChange={e => setForm({ ...form, veiculo_id: Number(e.target.value) })}
+  >
+    <option value="">Selecione um veículo</option>
+    {veiculos.map((v) => (
+      <option key={v.id} value={v.id}>
+        {v.nome}
+      </option>
+    ))}
+  </select>
+</div>
 
-      {/* DATA SAÍDA */}
-      <div className="space-y-1">
-        <label className="text-zinc-400 text-sm">Data de saída</label>
-        <input
-          className="w-full p-3 rounded bg-zinc-800 text-white"
-          type="date"
-          value={form.data_saida}
-          onChange={e => setForm({ ...form, data_saida: e.target.value })}
-        />
-      </div>
+{/* DATA SAÍDA */}
+<input
+  type="date"
+  className="w-full p-3 rounded bg-zinc-800 text-white"
+  value={form.data_saida}
+  onChange={e => setForm({ ...form, data_saida: e.target.value })}
+/>
 
-      {/* KM INICIAL */}
-      <div className="space-y-1">
-        <label className="text-zinc-400 text-sm">KM inicial</label>
-        <input
-          className="w-full p-3 rounded bg-zinc-800 text-white"
-          placeholder="Ex: 120000"
-          type="number"
-          value={form.km_inicial}
-          onChange={e => setForm({ ...form, km_inicial: Number(e.target.value) })}
-        />
-      </div>
+{/* STATUS */}
+<select
+  className="w-full p-3 rounded bg-zinc-800 text-white"
+  value={form.status}
+  onChange={e => setForm({ ...form, status: e.target.value })}
+>
+  <option value="em andamento">Em andamento</option>
+  <option value="concluída">Concluída</option>
+  <option value="cancelada">Cancelada</option>
+</select>
 
       {/* BOTÕES */}
       <div className="flex justify-end gap-2 pt-4">
