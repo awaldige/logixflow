@@ -60,13 +60,14 @@ export default function Viagens() {
     isFetchingRef.current = true
 
     try {
-      const { data, error } = await supabase
-        .from('viagens')
-       .select(`
-  *,
-  motoristas:motorista_id ( nome ),
-  veiculos:veiculo_id ( nome )
-`)
+     const { data, error } = await supabase
+  .from("viagens")
+  .select(`
+    *,
+    motoristas(nome),
+    veiculos(nome)
+  `)
+  .order("data_saida", { ascending: false });
         .order('data_saida', { ascending: false })
 
       if (error) throw error
