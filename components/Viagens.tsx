@@ -138,30 +138,45 @@ useEffect(() => {
     setModalOpen(true)
   }
 
-  async function saveViagem() {
+ async function saveViagem() {
+  try {
 
-    try {
-
-      if (editId) {
-        await supabase
-          .from('viagens')
-          .update(form)
-          .eq('id', editId)
-      } else {
-        await supabase
-          .from('viagens')
-          .insert([form])
-      }
-
-      setModalOpen(false)
-      setEditId(null)
-      resetForm()
-      fetchData()
-
-    } catch (error) {
-      console.error('Erro ao salvar viagem:', error)
+    const payload = {
+      ...form,
+      motorista_id: form.motorista_id || null,
+      veiculo_id: form.veiculo_id || null
     }
+
+    let response
+
+    if (editId) {
+      response = await supabase
+        .from('viagens')
+        .update(payload)
+        .eq('id', editId)
+    } else {
+      response = await supabase
+        .from('viagens')
+        .insert([payload])
+    }
+
+    const { error } = response
+
+    if (error) {
+      console.error('Erro Supabase:', error)
+      alert(error.message)
+      return
+    }
+
+    setModalOpen(false)
+    setEditId(null)
+    resetForm()
+    fetchData()
+
+  } catch (error) {
+    console.error('Erro geral:', error)
   }
+}
 
   async function deleteViagem(id: number) {
 
