@@ -44,14 +44,14 @@ export default function Motoristas() {
         .order('nome')
 
       if (error) {
-        console.error(error)
+        console.error('Erro ao buscar motoristas:', error.message)
         return
       }
 
       setMotoristas(data || [])
 
     } catch (error) {
-      console.error('Erro ao buscar motoristas:', error)
+      console.error('Erro inesperado ao buscar motoristas:', error)
     } finally {
       setLoading(false)
       isFetchingRef.current = false
@@ -59,7 +59,6 @@ export default function Motoristas() {
   }
 
   useEffect(() => {
-
     fetchData()
 
     const channel = supabase
@@ -78,7 +77,6 @@ export default function Motoristas() {
     return () => {
       supabase.removeChannel(channel)
     }
-
   }, [])
 
   function resetForm() {
@@ -113,15 +111,33 @@ export default function Motoristas() {
 
     try {
 
+      // 🔴 validação básica
+      if (!form.nome || !form.cnh) {
+        alert('Preencha Nome e CNH')
+        return
+      }
+
+      console.log('SALVANDO:', form)
+
+      let response
+
       if (editId) {
-        await supabase
+        response = await supabase
           .from('motoristas')
           .update(form)
           .eq('id', editId)
       } else {
-        await supabase
+        response = await supabase
           .from('motoristas')
           .insert([form])
+      }
+
+      const { error } = response
+
+      if (error) {
+        console.error('Erro Supabase:', error.message)
+        alert('Erro ao salvar motorista')
+        return
       }
 
       setModalOpen(false)
@@ -138,10 +154,15 @@ export default function Motoristas() {
 
     if (!confirm('Deseja excluir este motorista?')) return
 
-    await supabase
+    const { error } = await supabase
       .from('motoristas')
       .delete()
       .eq('id', id)
+
+    if (error) {
+      console.error('Erro ao deletar:', error.message)
+      return
+    }
 
     fetchData()
   }
@@ -164,18 +185,7 @@ export default function Motoristas() {
 
         <button
           onClick={openCreate}
-          className="
-            bg-blue-600
-            hover:bg-blue-500
-            transition
-            px-5
-            py-3
-            rounded-2xl
-            font-bold
-            flex
-            items-center
-            gap-2
-          "
+          className="bg-blue-600 hover:bg-blue-500 transition px-5 py-3 rounded-2xl font-bold flex items-center gap-2"
         >
           <Plus size={18} />
           Novo Motorista
@@ -232,7 +242,6 @@ export default function Motoristas() {
 
               </div>
 
-              {/* ACTIONS */}
               <div className="flex gap-2 mt-4">
 
                 <button
