@@ -65,7 +65,20 @@ export default function Viagens() {
       isFetchingRef.current = false
     }
   }
+ const [motoristas, setMotoristas] = useState<any[]>([])
+const [veiculos, setVeiculos] = useState<any[]>([])
+useEffect(() => {
+  async function load() {
+    const { data: m } = await supabase.from('motoristas').select('id, nome')
+    const { data: v } = await supabase.from('veiculos').select('id, nome')
 
+    setMotoristas(m || [])
+    setVeiculos(v || [])
+  }
+
+  load()
+}, [])
+  
   useEffect(() => {
 
     fetchData()
@@ -281,74 +294,83 @@ export default function Viagens() {
       )}
 
       {/* MODAL */}
+     {modalOpen && (
+  <div className="fixed inset-0 bg-black/70 flex items-center justify-center">
+
+    <div className="bg-zinc-900 p-6 rounded-3xl w-[90%] max-w-xl space-y-4">
+
+      <h2 className="text-2xl font-black text-white">
+        {editId ? 'Editar Viagem' : 'Nova Viagem'}
+      </h2>
+
       {/* ORIGEM */}
-<input
-  className="w-full p-3 rounded bg-zinc-800 text-white"
-  placeholder="Origem"
-  value={form.origem}
-  onChange={e => setForm({ ...form, origem: e.target.value })}
-/>
+      <input
+        className="w-full p-3 rounded bg-zinc-800 text-white"
+        placeholder="Origem"
+        value={form.origem}
+        onChange={e => setForm({ ...form, origem: e.target.value })}
+      />
 
-{/* DESTINO */}
-<input
-  className="w-full p-3 rounded bg-zinc-800 text-white"
-  placeholder="Destino"
-  value={form.destino}
-  onChange={e => setForm({ ...form, destino: e.target.value })}
-/>
+      {/* DESTINO */}
+      <input
+        className="w-full p-3 rounded bg-zinc-800 text-white"
+        placeholder="Destino"
+        value={form.destino}
+        onChange={e => setForm({ ...form, destino: e.target.value })}
+      />
 
-{/* MOTORISTA */}
-<div>
-  <label className="text-zinc-400 text-sm">Motorista</label>
-  <select
-    className="w-full p-3 rounded bg-zinc-800 text-white"
-    value={form.motorista_id}
-    onChange={e => setForm({ ...form, motorista_id: Number(e.target.value) })}
-  >
-    <option value="">Selecione um motorista</option>
-    {motoristas.map((m) => (
-      <option key={m.id} value={m.id}>
-        {m.nome}
-      </option>
-    ))}
-  </select>
-</div>
+      {/* MOTORISTA */}
+      <div>
+        <label className="text-zinc-400 text-sm">Motorista</label>
+        <select
+          className="w-full p-3 rounded bg-zinc-800 text-white"
+          value={form.motorista_id}
+          onChange={e => setForm({ ...form, motorista_id: Number(e.target.value) })}
+        >
+          <option value="">Selecione um motorista</option>
+          {motoristas.map((m: any) => (
+            <option key={m.id} value={m.id}>
+              {m.nome}
+            </option>
+          ))}
+        </select>
+      </div>
 
-{/* VEÍCULO */}
-<div>
-  <label className="text-zinc-400 text-sm">Veículo</label>
-  <select
-    className="w-full p-3 rounded bg-zinc-800 text-white"
-    value={form.veiculo_id}
-    onChange={e => setForm({ ...form, veiculo_id: Number(e.target.value) })}
-  >
-    <option value="">Selecione um veículo</option>
-    {veiculos.map((v) => (
-      <option key={v.id} value={v.id}>
-        {v.nome}
-      </option>
-    ))}
-  </select>
-</div>
+      {/* VEÍCULO */}
+      <div>
+        <label className="text-zinc-400 text-sm">Veículo</label>
+        <select
+          className="w-full p-3 rounded bg-zinc-800 text-white"
+          value={form.veiculo_id}
+          onChange={e => setForm({ ...form, veiculo_id: Number(e.target.value) })}
+        >
+          <option value="">Selecione um veículo</option>
+          {veiculos.map((v: any) => (
+            <option key={v.id} value={v.id}>
+              {v.nome}
+            </option>
+          ))}
+        </select>
+      </div>
 
-{/* DATA SAÍDA */}
-<input
-  type="date"
-  className="w-full p-3 rounded bg-zinc-800 text-white"
-  value={form.data_saida}
-  onChange={e => setForm({ ...form, data_saida: e.target.value })}
-/>
+      {/* DATA SAÍDA */}
+      <input
+        type="date"
+        className="w-full p-3 rounded bg-zinc-800 text-white"
+        value={form.data_saida}
+        onChange={e => setForm({ ...form, data_saida: e.target.value })}
+      />
 
-{/* STATUS */}
-<select
-  className="w-full p-3 rounded bg-zinc-800 text-white"
-  value={form.status}
-  onChange={e => setForm({ ...form, status: e.target.value })}
->
-  <option value="em andamento">Em andamento</option>
-  <option value="concluída">Concluída</option>
-  <option value="cancelada">Cancelada</option>
-</select>
+      {/* STATUS */}
+      <select
+        className="w-full p-3 rounded bg-zinc-800 text-white"
+        value={form.status}
+        onChange={e => setForm({ ...form, status: e.target.value })}
+      >
+        <option value="em andamento">Em andamento</option>
+        <option value="concluída">Concluída</option>
+        <option value="cancelada">Cancelada</option>
+      </select>
 
       {/* BOTÕES */}
       <div className="flex justify-end gap-2 pt-4">
@@ -372,8 +394,4 @@ export default function Viagens() {
     </div>
 
   </div>
-      )}
-
-    </div>
-  )
-}
+)}
