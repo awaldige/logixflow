@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { Plus } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
-// 1. TIPAGENS ATUALIZADAS
+// 1. TIPAGENS ATUALIZADAS (Adaptadas para usar 'placa' e 'modelo')
 interface Viagem {
   id: number
   origem: string
@@ -16,8 +16,9 @@ interface Viagem {
   status: string
   km_inicial: number
   km_final: number | null
+  // Relacionamentos do Supabase
   motoristas: { nome: string } | null
-  veiculos: { nome: string } | null
+  veiculos: { placa: string; modelo: string } | null // <-- Atualizado aqui
 }
 
 interface Motorista {
@@ -27,7 +28,8 @@ interface Motorista {
 
 interface Veiculo {
   id: number
-  nome: string
+  placa: string  // <-- Atualizado aqui
+  modelo: string // <-- Adicionado aqui caso queira usar
 }
 
 const INITIAL_FORM_STATE = {
@@ -53,7 +55,7 @@ export default function Viagens() {
 
   const isFetchingRef = useRef(false)
 
-  // 2. BUSCA DE VIAGENS COM VALORES RELACIONAIS (Correção da Sintaxe)
+  // 2. BUSCA DE VIAGENS COM VALORES RELACIONAIS (Buscando placa e modelo)
   const fetchData = useCallback(async () => {
     if (isFetchingRef.current) return
     isFetchingRef.current = true
@@ -64,8 +66,8 @@ export default function Viagens() {
         .select(`
           *,
           motoristas(nome),
-          veiculos(nome)
-        `)
+          veiculos(placa, modelo)
+        `) // <-- Atualizado para pedir colunas existentes
         .order("data_saida", { ascending: false })
 
       if (error) throw error
@@ -79,13 +81,13 @@ export default function Viagens() {
     }
   }, [])
 
-  // 3. CARGA INICIAL DE MOTORISTAS E VEÍCULOS
+  // 3. CARGA INICIAL DE MOTORISTAS E VEÍCULOS (Buscando colunas certas)
   useEffect(() => {
     async function loadAuxiliaryData() {
       try {
         const [motoristasRes, veiculosRes] = await Promise.all([
           supabase.from('motoristas').select('id, nome'),
-          supabase.from('veiculos').select('id, nome')
+          supabase.from('veiculos').select('id, placa, modelo') // <-- Atualizado aqui
         ])
 
         if (motoristasRes.error) throw motoristasRes.error
@@ -102,7 +104,7 @@ export default function Viagens() {
     loadAuxiliaryData()
   }, [])
 
-  // 4. REALTIME E CHAMADA INICIAL
+  // 4. REALTIME
   useEffect(() => {
     fetchData()
 
@@ -232,7 +234,7 @@ export default function Viagens() {
         </div>
       )}
 
-      {/* GRID COM EXIBIÇÃO DE NOMES */}
+      {/* GRID */}
       {!loading && (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {viagens.map((v) => (
@@ -250,7 +252,10 @@ export default function Viagens() {
 
                 <div className="mt-6 space-y-2 text-zinc-400 text-sm">
                   <p>Motorista: <span className="text-white ml-2">{v.motoristas?.nome || 'Não vinculado'}</span></p>
-                  <p>Veículo: <span className="text-white ml-2">{v.veiculos?.nome || 'Não vinculado'}</span></p>
+                  {/* Exibindo Placa e Modelo do veículo nos cards */}
+                  <p>Veículo: <span className="text-white ml-2">
+                    {v.veiculos ? `${v.veiculos.placa} - ${v.veiculos.modelo}` : 'Não vinculado'}
+                  </span></p>
                   <p>KM Inicial: <span className="text-white ml-2">{v.km_inicial}</span></p>
                   {v.km_final && <p>KM Final: <span className="text-white ml-2">{v.km_final}</span></p>}
                   <p>Data Saída: <span className="text-white ml-2">{new Date(v.data_saida).toLocaleDateString('pt-BR')}</span></p>
@@ -326,7 +331,7 @@ export default function Viagens() {
                   <option value={0}>Selecione um veículo</option>
                   {veiculos.map((v) => (
                     <option key={v.id} value={v.id}>
-                      🚛 {v.nome}
+                      🚛 {v.placa} - {v.modelo} {/* <-- Exibindo Placa e Modelo no Dropdown */}
                     </option>
                   ))}
                 </select>
