@@ -43,10 +43,10 @@ export default function Home() {
           .from('motoristas')
           .select('*', { count: 'exact', head: true }),
 
+        // CORREÇÃO: Removido o filtro .eq('status', 'Em Andamento') para contar todas as viagens cadastradas
         supabase
           .from('viagens')
-          .select('*', { count: 'exact', head: true })
-          .eq('status', 'Em Andamento'),
+          .select('*', { count: 'exact', head: true }),
 
         supabase
           .from('manutencoes')
