@@ -236,17 +236,31 @@ export default function Viagens() {
     return `${v.veiculos.placa} - ${v.veiculos.modelo}`
   }
 
-  const formatarData = (dataStr: string | null) => {
+const formatarData = (dataStr: string | null) => {
     if (!dataStr) return 'Não cadastrada'
-    // Evita problemas de fuso horário removendo o componente de hora se aplicável
-    const limpaStr = dataStr.includes(' ') ? dataStr.split(' ')[0] : dataStr
-    const partes = limpaStr.split('-')
-    if (partes.length === 3) {
-      return `${partes[2]}/${partes[1]}/${partes[0]}`
+    
+    try {
+      // 1. Se a string vier com "T" (formato ISO do Supabase), pegamos apenas a parte da data
+      const apenasData = dataStr.includes('T') ? dataStr.split('T')[0] : dataStr
+      
+      // 2. Remove qualquer resíduo de hora caso venha com espaço (ex: "2026-06-16 00:00:00")
+      const dataLimpa = apenasData.trim().split(' ')[0]
+      
+      // 3. Separa o ano, mês e dia pelo hífen
+      const partes = dataLimpa.split('-')
+      
+      if (partes.length === 3) {
+        // Retorna no formato brasileiro: DD/MM/AAAA
+        return `${partes[2]}/${partes[1]}/${partes[0]}`
+      }
+      
+      // Caso o banco mande em outro formato, o JavaScript tenta converter nativamente
+      return new Date(dataStr).toLocaleDateString('pt-BR')
+    } catch (error) {
+      console.error('Erro ao formatar data:', error)
+      return 'Data inválida'
     }
-    return new Date(dataStr).toLocaleDateString('pt-BR')
   }
-
   return (
     <div className="space-y-6 p-6 max-w-7xl mx-auto">
       {/* HEADER */}
