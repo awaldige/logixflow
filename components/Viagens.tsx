@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { Plus } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
-// 1. TIPAGENS ATUALIZADAS (Adaptadas para usar 'placa' e 'modelo')
+// 1. TIPAGENS ATUALIZADAS (Flexibilizadas para evitar quebras por valores nulos)
 interface Viagem {
   id: number
   origem: string
@@ -16,9 +16,9 @@ interface Viagem {
   status: string
   km_inicial: number
   km_final: number | null
-  // Relacionamentos do Supabase
-  motoristas: { nome: string } | null
-  veiculos: { placa: string; modelo: string } | null // <-- Atualizado aqui
+  // Relacionamentos do Supabase tratados como arrays ou objetos simples
+  motoristas: { nome: string } | { nome: string }[] | null
+  veiculos: { placa: string; modelo: string } | { placa: string; modelo: string }[] | null
 }
 
 interface Motorista {
@@ -28,8 +28,8 @@ interface Motorista {
 
 interface Veiculo {
   id: number
-  placa: string  // <-- Atualizado aqui
-  modelo: string // <-- Adicionado aqui caso queira usar
+  placa: string
+  modelo: string
 }
 
 const INITIAL_FORM_STATE = {
@@ -55,7 +55,7 @@ export default function Viagens() {
 
   const isFetchingRef = useRef(false)
 
-  // 2. BUSCA DE VIAGENS COM VALORES RELACIONAIS (Buscando placa e modelo)
+  // 2. BUSCA DE VIAGENS ROBUSTA (Especificando campos para blindar relacionamentos nulos)
   const fetchData = useCallback(async () => {
     if (isFetchingRef.current) return
     isFetchingRef.current = true
@@ -64,13 +64,24 @@ export default function Viagens() {
       const { data, error } = await supabase
         .from("viagens")
         .select(`
-          *,
-          motoristas(nome),
-          veiculos(placa, modelo)
-        `) // <-- Atualizado para pedir colunas existentes
+          id,
+          origem,
+          destino,
+          veiculo_id,
+          motorista_id,
+          data_saida,
+          data_retorno,
+          status,
+          km_inicial,
+          km_final,
+          motoristas ( nome ),
+          veiculos ( placa, modelo )
+        `)
         .order("data_saida", { ascending: false })
 
       if (error) throw error
+      
+      console.log("Viagens carregadas do banco:", data)
       setViagens((data as unknown as Viagem[]) || [])
     } catch (error) {
       console.error('Erro ao buscar viagens:', error)
@@ -81,13 +92,13 @@ export default function Viagens() {
     }
   }, [])
 
-  // 3. CARGA INICIAL DE MOTORISTAS E VEÍCULOS (Buscando colunas certas)
+  // 3. CARGA INICIAL DE MOTORISTAS E VEÍCULOS
   useEffect(() => {
     async function loadAuxiliaryData() {
       try {
         const [motoristasRes, veiculosRes] = await Promise.all([
           supabase.from('motoristas').select('id, nome'),
-          supabase.from('veiculos').select('id, placa, modelo') // <-- Atualizado aqui
+          supabase.from('veiculos').select('id, placa, modelo')
         ])
 
         if (motoristasRes.error) throw motoristasRes.error
@@ -104,7 +115,7 @@ export default function Viagens() {
     loadAuxiliaryData()
   }, [])
 
-  // 4. REALTIME
+  // 4. REALTIME FILTRADO
   useEffect(() => {
     fetchData()
 
@@ -141,8 +152,8 @@ export default function Viagens() {
       destino: v.destino,
       veiculo_id: v.veiculo_id || 0,
       motorista_id: v.motorista_id || 0,
-      data_saida: v.data_saida,
-      data_retorno: v.data_retorno || '',
+      data_saida: v.data_saida ? v.data_saida.substring(0, 10) : '',
+      data_retorno: v.data_retorno ? v.data_retorno.substring(0, 10) : '',
       status: v.status,
       km_inicial: v.km_inicial,
       km_final: v.km_final || 0
@@ -150,7 +161,7 @@ export default function Viagens() {
     setModalOpen(true)
   }
 
-  // 5. SALVAR VIAGEM
+  // 5. SALVAR VIAGEM CORRIGIDO
   async function saveViagem() {
     if (!form.origem.trim()) return alert('Por favor, informe a origem.')
     if (!form.destino.trim()) return alert('Por favor, informe o destino.')
@@ -167,8 +178,8 @@ export default function Viagens() {
         data_saida: form.data_saida,
         data_retorno: form.data_retorno || null,
         status: form.status,
-        km_inicial: form.km_inicial,
-        km_final: form.km_final || null
+        km_inicial: Number(form.km_inicial) || 0,
+        km_final: form.km_final ? Number(form.km_final) : null
       }
 
       let error
@@ -183,7 +194,7 @@ export default function Viagens() {
 
       if (error) {
         console.error('Erro Supabase:', error)
-        alert(`Erro ao salvar: ${error.message}`)
+        alert(`Erro ao salvar no banco: ${error.message}`)
         return
       }
 
@@ -207,6 +218,33 @@ export default function Viagens() {
       console.error('Erro ao deletar:', error)
       alert('Não foi possível excluir a viagem.')
     }
+  }
+
+  // Funções auxiliares seguras para tratar dados de tabelas relacionadas do Supabase
+  const getMotoristaNome = (v: Viagem) => {
+    if (!v.motoristas) return 'Não informado'
+    if (Array.isArray(v.motoristas)) return v.motoristas[0]?.nome || 'Não informado'
+    return v.motoristas.nome
+  }
+
+  const getVeiculoTexto = (v: Viagem) => {
+    if (!v.veiculos) return 'Não informado'
+    if (Array.isArray(v.veiculos)) {
+      const target = v.veiculos[0]
+      return target ? `${target.placa} - ${target.modelo}` : 'Não informado'
+    }
+    return `${v.veiculos.placa} - ${v.veiculos.modelo}`
+  }
+
+  const formatarData = (dataStr: string | null) => {
+    if (!dataStr) return 'Não cadastrada'
+    // Evita problemas de fuso horário removendo o componente de hora se aplicável
+    const limpaStr = dataStr.includes(' ') ? dataStr.split(' ')[0] : dataStr
+    const partes = limpaStr.split('-')
+    if (partes.length === 3) {
+      return `${partes[2]}/${partes[1]}/${partes[0]}`
+    }
+    return new Date(dataStr).toLocaleDateString('pt-BR')
   }
 
   return (
@@ -251,14 +289,13 @@ export default function Viagens() {
                 <p className="text-zinc-500 mt-1 text-sm">Viagem #{v.id}</p>
 
                 <div className="mt-6 space-y-2 text-zinc-400 text-sm">
-                  <p>Motorista: <span className="text-white ml-2">{v.motoristas?.nome || 'Não vinculado'}</span></p>
-                  {/* Exibindo Placa e Modelo do veículo nos cards */}
-                  <p>Veículo: <span className="text-white ml-2">
-                    {v.veiculos ? `${v.veiculos.placa} - ${v.veiculos.modelo}` : 'Não vinculado'}
-                  </span></p>
+                  <p>Motorista: <span className="text-white ml-2">{getMotoristaNome(v)}</span></p>
+                  <p>Veículo: <span className="text-white ml-2">{getVeiculoTexto(v)}</span></p>
                   <p>KM Inicial: <span className="text-white ml-2">{v.km_inicial}</span></p>
-                  {v.km_final && <p>KM Final: <span className="text-white ml-2">{v.km_final}</span></p>}
-                  <p>Data Saída: <span className="text-white ml-2">{new Date(v.data_saida).toLocaleDateString('pt-BR')}</span></p>
+                  {v.km_final !== null && v.km_final > 0 && (
+                    <p>KM Final: <span className="text-white ml-2">{v.km_final}</span></p>
+                  )}
+                  <p>Data Saída: <span className="text-white ml-2">{formatarData(v.data_saida)}</span></p>
                 </div>
               </div>
 
@@ -331,7 +368,7 @@ export default function Viagens() {
                   <option value={0}>Selecione um veículo</option>
                   {veiculos.map((v) => (
                     <option key={v.id} value={v.id}>
-                      🚛 {v.placa} - {v.modelo} {/* <-- Exibindo Placa e Modelo no Dropdown */}
+                      🚛 {v.placa} - {v.modelo}
                     </option>
                   ))}
                 </select>
