@@ -264,98 +264,170 @@ export default function Abastecimentos() {
 
         </div>
       )}
-
-      {/* MODAL */}
+     
+    {/* MODAL REMODELADO */}
     {modalOpen && (
-  <div className="fixed inset-0 bg-black/70 flex items-center justify-center">
+      <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4 overflow-y-auto">
+        <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-3xl w-full max-w-xl space-y-4 my-auto text-zinc-300">
+          
+          <div className="border-b border-zinc-800 pb-3">
+            <h2 className="text-2xl font-black text-white">
+              {editId ? '🛠️ Editar Abastecimento' : '⛽ Novo Abastecimento'}
+            </h2>
+            <p className="text-xs text-zinc-500 mt-1">Insira os dados do cupom fiscal para auditoria de frota.</p>
+          </div>
 
-    <div className="bg-zinc-900 p-6 rounded-3xl w-[90%] max-w-xl space-y-4">
+          <div className="space-y-4">
+            
+            {/* SELEÇÃO DE VIAGEM (Traz veículo e motorista juntos) */}
+            <div>
+              <label className="text-zinc-400 text-xs font-bold uppercase ml-1">Vincular à Viagem Ativa *</label>
+              <select 
+                className="w-full p-3 mt-1 rounded-xl bg-zinc-800 text-white border border-zinc-700 focus:outline-none focus:border-blue-500"
+                value={form.viagem_id || ''} 
+                onChange={e => {
+                  const vId = Number(e.target.value);
+                  // Aqui você pode buscar a viagem na sua lista para preencher motorista/veículo na tela se quiser
+                  setForm({ ...form, viagem_id: vId });
+                }}
+              >
+                <option value="">Selecione a viagem correspondente</option>
+                {/* Mapeie suas viagens aqui dentro. Exemplo: */}
+                {/* viagens.map(v => (
+                  <option key={v.id} value={v.id}>
+                    Viagem #{v.id} | {v.veiculos?.placa} - {v.motoristas?.nome} ({v.destino})
+                  </option>
+                )) */}
+                <option value="1">Viagem #1 | ABC-1234 - João Silva (Rota: SP)</option> {/* Temporário para testes */}
+              </select>
+            </div>
 
-      <h2 className="text-2xl font-black text-white">
-        {editId ? 'Editar Abastecimento' : 'Novo Abastecimento'}
-      </h2>
+            {/* LINHA 1: DATA/HORA & HODÔMETRO */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-zinc-400 text-xs font-bold uppercase ml-1">Data e Hora *</label>
+                <input
+                  type="datetime-local"
+                  className="w-full p-3 mt-1 rounded-xl bg-zinc-800 text-white border border-zinc-700 focus:outline-none focus:border-blue-500"
+                  value={form.created_at || new Date().toISOString().substring(0, 16)}
+                  onChange={e => setForm({ ...form, created_at: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="text-zinc-400 text-xs font-bold uppercase ml-1">Hodômetro Atual (KM) *</label>
+                <input
+                  type="number"
+                  placeholder="Ex: 145200"
+                  className="w-full p-3 mt-1 rounded-xl bg-zinc-800 text-white border border-zinc-700 focus:outline-none focus:border-blue-500"
+                  value={form.quilometragem || ''}
+                  onChange={e => setForm({ ...form, quilometragem: Number(e.target.value) })}
+                />
+              </div>
+            </div>
 
-      {/* VIAGEM */}
-      <div className="space-y-1">
-        <label className="text-zinc-400 text-sm">
-          ID da viagem
-        </label>
+            {/* LINHA 2: TIPO DE COMBUSTÍVEL */}
+            <div>
+              <label className="text-zinc-400 text-xs font-bold uppercase ml-1">Tipo de Combustível *</label>
+              <select 
+                className="w-full p-3 mt-1 rounded-xl bg-zinc-800 text-white border border-zinc-700 focus:outline-none focus:border-blue-500"
+                value={form.tipo_combustivel || 'Diesel'}
+                onChange={e => setForm({ ...form, tipo_combustivel: e.target.value })}
+              >
+                <option value="Gasolina">Gasolina</option>
+                <option value="Etanol">Etanol</option>
+                <option value="Diesel">Diesel</option>
+                <option value="GNV">GNV</option>
+              </select>
+            </div>
 
-        <input
-          className="w-full p-3 rounded bg-zinc-800 text-white"
-          placeholder="Ex: 1"
-          type="number"
-          value={form.viagem_id}
-          onChange={e => setForm({ ...form, viagem_id: Number(e.target.value) })}
-        />
+            {/* LINHA 3: QUANTIDADE & VALOR UNITÁRIO */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-zinc-400 text-xs font-bold uppercase ml-1">Qtd. Abastecida (Litros) *</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  placeholder="Ex: 50.00"
+                  className="w-full p-3 mt-1 rounded-xl bg-zinc-800 text-white border border-zinc-700 focus:outline-none focus:border-blue-500"
+                  value={form.litros || ''}
+                  onChange={e => {
+                    const litrosVal = Number(e.target.value);
+                    const precoUnit = Number(form.valor_litro || 0);
+                    setForm({ 
+                      ...form, 
+                      litros: litrosVal,
+                      total: Number((litrosVal * precoUnit).toFixed(2)) // Cálculo automático do Total
+                    });
+                  }}
+                />
+              </div>
+              <div>
+                <label className="text-zinc-400 text-xs font-bold uppercase ml-1">Valor Unitário (por Litro) *</label>
+                <input
+                  type="number"
+                  step="0.001"
+                  placeholder="Ex: 5.89"
+                  className="w-full p-3 mt-1 rounded-xl bg-zinc-800 text-white border border-zinc-700 focus:outline-none focus:border-blue-500"
+                  value={form.valor_litro || ''}
+                  onChange={e => {
+                    const precoUnit = Number(e.target.value);
+                    const litrosVal = Number(form.litros || 0);
+                    setForm({ 
+                      ...form, 
+                      valor_litro: precoUnit,
+                      total: Number((litrosVal * precoUnit).toFixed(2)) // Cálculo automático do Total
+                    });
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* LINHA 4: VALOR TOTAL (CALCULADO AUTOMATICAMENTE) */}
+            <div className="bg-zinc-950/50 border border-zinc-800 rounded-2xl p-4 flex items-center justify-between">
+              <div>
+                <p className="text-xs text-zinc-500 font-bold uppercase">Custo Total da Operação</p>
+                <p className="text-xs text-zinc-400 mt-0.5">(Multiplicação automática de Litros × Valor por litro)</p>
+              </div>
+              <div className="text-right">
+                <span className="text-xs text-emerald-500 font-bold mr-1">R$</span>
+                <span className="text-2xl font-black text-emerald-400">
+                  {form.total ? Number(form.total).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '0,00'}
+                </span>
+              </div>
+            </div>
+
+            {/* LINHA 5: POSTO DE COMBUSTÍVEL */}
+            <div>
+              <label className="text-zinc-400 text-xs font-bold uppercase ml-1">Posto de Combustível (Nome/Bandeira) *</label>
+              <input
+                type="text"
+                className="w-full p-3 mt-1 rounded-xl bg-zinc-800 text-white border border-zinc-700 focus:outline-none focus:border-blue-500"
+                placeholder="Ex: Posto Ipiranga - Av. Paulista, 1500"
+                value={form.local_abastecimento || ''}
+                onChange={e => setForm({ ...form, local_abastecimento: e.target.value })}
+              />
+            </div>
+
+          </div>
+
+          {/* BOTÕES DE AÇÃO */}
+          <div className="flex justify-end gap-2 pt-4 border-t border-zinc-800">
+            <button
+              type="button"
+              onClick={() => setModalOpen(false)}
+              className="px-5 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl font-medium transition"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={saveAbastecimento}
+              className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold transition"
+            >
+              Confirmar e Salvar
+            </button>
+          </div>
+
+        </div>
       </div>
-
-      {/* LITROS */}
-      <div className="space-y-1">
-        <label className="text-zinc-400 text-sm">
-          Litros abastecidos
-        </label>
-
-        <input
-          className="w-full p-3 rounded bg-zinc-800 text-white"
-          placeholder="Ex: 50"
-          type="number"
-          value={form.litros}
-          onChange={e => setForm({ ...form, litros: Number(e.target.value) })}
-        />
-      </div>
-
-      {/* VALOR LITRO */}
-      <div className="space-y-1">
-        <label className="text-zinc-400 text-sm">
-          Valor por litro
-        </label>
-
-        <input
-          className="w-full p-3 rounded bg-zinc-800 text-white"
-          placeholder="Ex: 5.89"
-          type="number"
-          value={form.valor_litro}
-          onChange={e => setForm({ ...form, valor_litro: Number(e.target.value) })}
-        />
-      </div>
-
-      {/* LOCAL */}
-      <div className="space-y-1">
-        <label className="text-zinc-400 text-sm">
-          Local do abastecimento
-        </label>
-
-        <input
-          className="w-full p-3 rounded bg-zinc-800 text-white"
-          placeholder="Ex: Posto Shell - Centro"
-          value={form.local_abastecimento}
-          onChange={e => setForm({ ...form, local_abastecimento: e.target.value })}
-        />
-      </div>
-
-      {/* BOTÕES */}
-      <div className="flex justify-end gap-2 pt-4">
-
-        <button
-          onClick={() => setModalOpen(false)}
-          className="px-4 py-2 bg-gray-600 hover:bg-gray-500 rounded-xl"
-        >
-          Cancelar
-        </button>
-
-        <button
-          onClick={saveAbastecimento}
-          className="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-xl"
-        >
-          Salvar
-        </button>
-
-      </div>
-
-    </div>
-
-  </div>
-)}    </div>
-  )
-}
+    )}
