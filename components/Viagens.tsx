@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { Plus } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
-// 1. TIPAGENS ATUALIZADAS (Incluindo os relacionamentos do banco)
+// 1. TIPAGENS ATUALIZADAS
 interface Viagem {
   id: number
   origem: string
@@ -16,7 +16,6 @@ interface Viagem {
   status: string
   km_inicial: number
   km_final: number | null
-  // Joins do Supabase
   motoristas: { nome: string } | null
   veiculos: { nome: string } | null
 }
@@ -54,24 +53,23 @@ export default function Viagens() {
 
   const isFetchingRef = useRef(false)
 
-  // 2. BUSCA DE VIAGENS COM VALORES RELACIONAIS (Join)
+  // 2. BUSCA DE VIAGENS COM VALORES RELACIONAIS (Correção da Sintaxe)
   const fetchData = useCallback(async () => {
     if (isFetchingRef.current) return
     isFetchingRef.current = true
 
     try {
-     const { data, error } = await supabase
-  .from("viagens")
-  .select(`
-    *,
-    motoristas(nome),
-    veiculos(nome)
-  `)
-  .order("data_saida", { ascending: false });
-        .order('data_saida', { ascending: false })
+      const { data, error } = await supabase
+        .from("viagens")
+        .select(`
+          *,
+          motoristas(nome),
+          veiculos(nome)
+        `)
+        .order("data_saida", { ascending: false })
 
       if (error) throw error
-      setViagens(data || [])
+      setViagens((data as unknown as Viagem[]) || [])
     } catch (error) {
       console.error('Erro ao buscar viagens:', error)
       alert('Não foi possível carregar as viagens.')
@@ -104,7 +102,7 @@ export default function Viagens() {
     loadAuxiliaryData()
   }, [])
 
-  // 4. REALTIME ESCUTANDO MUTAÇÕES E ATUALIZANDO A LISTA
+  // 4. REALTIME E CHAMADA INICIAL
   useEffect(() => {
     fetchData()
 
@@ -150,9 +148,8 @@ export default function Viagens() {
     setModalOpen(true)
   }
 
-  // 5. SALVAR COM VALIDAÇÕES DE CAMPOS OBRIGATÓRIOS
+  // 5. SALVAR VIAGEM
   async function saveViagem() {
-    // Validações no Front-end antes de enviar ao Supabase
     if (!form.origem.trim()) return alert('Por favor, informe a origem.')
     if (!form.destino.trim()) return alert('Por favor, informe o destino.')
     if (form.motorista_id === 0) return alert('Por favor, selecione um motorista.')
@@ -161,10 +158,14 @@ export default function Viagens() {
 
     try {
       const payload = {
-        ...form,
+        origem: form.origem,
+        destino: form.destino,
         motorista_id: form.motorista_id || null,
         veiculo_id: form.veiculo_id || null,
+        data_saida: form.data_saida,
         data_retorno: form.data_retorno || null,
+        status: form.status,
+        km_inicial: form.km_inicial,
         km_final: form.km_final || null
       }
 
@@ -248,7 +249,6 @@ export default function Viagens() {
                 <p className="text-zinc-500 mt-1 text-sm">Viagem #{v.id}</p>
 
                 <div className="mt-6 space-y-2 text-zinc-400 text-sm">
-                  {/* Nomes buscados via relacionamento ao invés de IDs numéricos */}
                   <p>Motorista: <span className="text-white ml-2">{v.motoristas?.nome || 'Não vinculado'}</span></p>
                   <p>Veículo: <span className="text-white ml-2">{v.veiculos?.nome || 'Não vinculado'}</span></p>
                   <p>KM Inicial: <span className="text-white ml-2">{v.km_inicial}</span></p>
@@ -299,49 +299,38 @@ export default function Viagens() {
                 value={form.destino}
                 onChange={e => setForm({ ...form, destino: e.target.value })}
               />
-<div>
-  <label className="text-zinc-400 text-xs ml-1">
-    Motorista
-  </label>
-
-  <select
-    className="w-full p-3 rounded-xl bg-zinc-800 text-white border border-zinc-700"
-    value={form.motorista_id}
-    onChange={e =>
-      setForm({ ...form, motorista_id: Number(e.target.value) })
-    }
-  >
-    <option value={0}>Selecione um motorista</option>
-
-    {motoristas.map((m) => (
-      <option key={m.id} value={m.id}>
-        🚗 {m.nome}
-      </option>
-    ))}
-  </select>
-</div>
 
               <div>
-  <label className="text-zinc-400 text-xs ml-1">
-    Veículo
-  </label>
+                <label className="text-zinc-400 text-xs ml-1">Motorista</label>
+                <select
+                  className="w-full p-3 rounded-xl bg-zinc-800 text-white border border-zinc-700"
+                  value={form.motorista_id}
+                  onChange={e => setForm({ ...form, motorista_id: Number(e.target.value) })}
+                >
+                  <option value={0}>Selecione um motorista</option>
+                  {motoristas.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      🚗 {m.nome}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-  <select
-    className="w-full p-3 rounded-xl bg-zinc-800 text-white border border-zinc-700"
-    value={form.veiculo_id}
-    onChange={e =>
-      setForm({ ...form, veiculo_id: Number(e.target.value) })
-    }
-  >
-    <option value={0}>Selecione um veículo</option>
-
-    {veiculos.map((v) => (
-      <option key={v.id} value={v.id}>
-        🚛 {v.nome}
-      </option>
-    ))}
-  </select>
-</div>
+              <div>
+                <label className="text-zinc-400 text-xs ml-1">Veículo</label>
+                <select
+                  className="w-full p-3 rounded-xl bg-zinc-800 text-white border border-zinc-700"
+                  value={form.veiculo_id}
+                  onChange={e => setForm({ ...form, veiculo_id: Number(e.target.value) })}
+                >
+                  <option value={0}>Selecione um veículo</option>
+                  {veiculos.map((v) => (
+                    <option key={v.id} value={v.id}>
+                      🚛 {v.nome}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
