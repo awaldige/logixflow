@@ -1,4 +1,3 @@
-
 import Card from './Card'
 
 interface DashboardProps {
@@ -17,19 +16,18 @@ export default function Dashboard({
   totalAbastecimentos
 }: DashboardProps) {
 
-  // simulação de KPIs (depois pode vir do banco)
+  // Normalização e conversão segura dos dados vindos das props
   const veiculos = Number(totalVeiculos || 0)
-const manutencoes = Number(totalManutencoes || 0)
-const abastecimentos = Number(totalAbastecimentos || 0)
+  const manutencoes = Number(totalManutencoes || 0)
+  const abastecimentos = Number(totalAbastecimentos || 0)
+  const viagens = Number(totalViagens || 0) // <--- Adicionado para garantir o valor numérico
 
-const custoManutencao = manutencoes * 350
-const custoCombustivel = abastecimentos * 250
-const custoTotal = custoManutencao + custoCombustivel
+  // Cálculos financeiros simulados
+  const custoManutencao = manutencoes * 350
+  const custoCombustivel = abastecimentos * 250
+  const custoTotal = custoManutencao + custoCombustivel
 
-const mediaCustoPorVeiculo =
-  veiculos > 0 ? custoTotal / veiculos : 0
-
-  
+  const mediaCustoPorVeiculo = veiculos > 0 ? custoTotal / veiculos : 0
 
   return (
     <div className="space-y-8">
@@ -39,7 +37,6 @@ const mediaCustoPorVeiculo =
         <h2 className="text-3xl font-black text-white">
           Visão Executiva
         </h2>
-
         <p className="text-zinc-500 mt-1">
           Indicadores financeiros e operacionais da frota em tempo real.
         </p>
@@ -83,35 +80,35 @@ const mediaCustoPorVeiculo =
 
         <Card
           titulo="Veículos"
-          valor={totalVeiculos}
+          valor={veiculos}
           cor="text-white"
           descricao="Frota ativa"
         />
 
         <Card
           titulo="Motoristas"
-          valor={totalMotoristas}
+          valor={Number(totalMotoristas || 0)}
           cor="text-white"
           descricao="Equipe cadastrada"
         />
 
         <Card
           titulo="Viagens"
-          valor={totalViagens}
+          valor={viagens} // <--- Passando a variável tratada com segurança
           cor="text-blue-400"
           descricao="Operações registradas"
         />
 
         <Card
           titulo="Manutenções"
-          valor={totalManutencoes}
+          valor={manutencoes}
           cor="text-yellow-400"
           descricao="Histórico técnico"
         />
 
         <Card
           titulo="Abastecimentos"
-          valor={totalAbastecimentos}
+          valor={abastecimentos}
           cor="text-emerald-400"
           descricao="Consumo total"
         />
@@ -119,28 +116,17 @@ const mediaCustoPorVeiculo =
       </div>
 
       {/* PAINEL EXECUTIVO FINAL */}
-      <div className="
-        bg-zinc-900
-        border border-zinc-800
-        rounded-3xl
-        p-6
-        hover:border-zinc-700
-        transition
-      ">
-
+      <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 hover:border-zinc-700 transition">
         <h3 className="text-white font-bold text-lg">
           Status da Operação
         </h3>
-
         <p className="text-zinc-500 text-sm mt-2">
           A frota está operando normalmente com monitoramento em tempo real via Supabase.
         </p>
-
         <div className="mt-4 flex items-center gap-2 text-emerald-400 text-sm font-bold">
           <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
           Operação estável
         </div>
-
       </div>
 
     </div>
