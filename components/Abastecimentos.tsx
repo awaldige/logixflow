@@ -43,10 +43,11 @@ export default function Abastecimentos() {
         .select('*')
         .order('id', { ascending: false })
 
-      if (error) {
-        console.error(error)
-        return
-      }
+     if (error) {
+     console.error('Erro Supabase:', error)
+     alert(error.message)
+     return
+     }
 
       setAbastecimentos(data || [])
 
@@ -86,7 +87,7 @@ export default function Abastecimentos() {
       viagem_id: 0,
       litros: 0,
       valor_litro: 0,
-      total: 0,
+      total:0,
       local_abastecimento: ''
     })
   }
