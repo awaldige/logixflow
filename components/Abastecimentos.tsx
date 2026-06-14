@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { Plus, Fuel, Calendar, DollarSign, Gauge, User, Trash2 } from 'lucide-react'
+import { Plus, Fuel, Gauge, User, Trash2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
 // 1. TIPAGENS INTEGRADAS
@@ -128,19 +128,17 @@ export default function Abastecimentos() {
     setModalOpen(true)
   }
 
-  // 4. SALVAMENTO ADAPTADO PARA O SCHEMA ATUAL
+  // 4. SALVAMENTO ADAPTADO (REMOVIDO O CAMPO 'total' DO PAYLOAD)
   async function saveAbastecimento() {
     if (!form.viagem_id) return alert('Selecione uma viagem vinculada.')
     if (!form.litros || !form.valor_litro) return alert('Preencha os valores de litros e preço.')
 
     try {
-      // Ajuste de Payload: Caso seu banco físico do print exato ainda não tenha os campos novos, 
-      // enviamos apenas o que o banco aceita para evitar quebras, mas calculamos tudo.
+      // Enviando apenas campos existentes e permitidos para escrita física no banco
       const payload = {
         viagem_id: Number(form.viagem_id),
         litros: Number(form.litros),
         valor_litro: Number(form.valor_litro),
-        total: Number(form.total),
         local_abastecimento: form.local_abastecimento || 'Não informado'
       }
 
@@ -198,7 +196,7 @@ export default function Abastecimentos() {
       {/* HEADER */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-black text-white">Abastecimentos</h2>
+          <h2 className="text-3xl font-black text-white">Abastecimentos Nova Versão</h2>
           <p className="text-zinc-500 mt-1">Controle dos abastecimentos realizados.</p>
         </div>
         <button onClick={openCreate} className="bg-blue-600 hover:bg-blue-500 transition px-5 py-3 rounded-2xl font-bold flex items-center gap-2">
@@ -232,7 +230,7 @@ export default function Abastecimentos() {
                   </div>
                 </div>
 
-                {/* Informações cruzadas automaticamente (Veículo e Motorista) */}
+                {/* Informações cruzadas automaticamente */}
                 <div className="bg-zinc-950/40 rounded-2xl p-4 space-y-2 text-sm text-zinc-400 border border-zinc-800/50">
                   <p className="flex justify-between items-center">
                     <span className="flex items-center gap-1.5 text-xs"><User size={13} /> Motorista:</span>
