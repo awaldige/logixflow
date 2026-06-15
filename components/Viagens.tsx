@@ -94,15 +94,26 @@ export default function Viagens() {
       const [motoristasRes, veiculosRes, manutencoesRes] = await Promise.all([
         supabase.from('motoristas').select('id, nome'),
         supabase.from('veiculos').select('id, placa, modelo'),
-        // Busca na tabela de manutenções apenas as que estão 'em andamento'
-        supabase.from('manutencoes').select('veiculo_id, status').eq('status', 'em andamento')
+        // Buscando da tabela de manutenções
+        supabase.from('manutencoes').select('veiculo_id, status')
       ])
 
+      // 🚨 ALERTA 1: Se der erro na tabela de manutenções, vai avisar na tela
+      if (manutencoesRes.error) {
+        alert(`Erro ao ler tabela de manutenções: ${manutencoesRes.error.message}\nVerifique se o nome da tabela está correto.`);
+      }
+
       setMotoristas(motoristasRes.data || [])
+      setViagens([]) // Limpeza de segurança se necessário
       setVeiculos(veiculosRes.data || [])
       
-      // Mapeia e salva apenas os IDs dos veículos que estão presos na oficina
-      const idsEmManutencao = (manutencoesRes.data || []).map(m => m.veiculo_id)
+      // Filtra as manutenções que estão 'em andamento'
+      const ativas = (manutencoesRes.data || []).filter(m => m.status?.toLowerCase().trim() === 'em andamento');
+      
+      // 🚨 ALERTA 2: Vai te mostrar na tela quantos veículos ele achou em manutenção
+      alert(`O sistema encontrou ${ativas.length} veículo(s) com status 'em andamento' na oficina.`);
+
+      const idsEmManutencao = ativas.map(m => m.veiculo_id)
       setManutencoesAtivas(idsEmManutencao)
 
     } catch (error) {
