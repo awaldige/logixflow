@@ -20,20 +20,23 @@ export default function Home() {
   const [totalManutencoes, setTotalManutencoes] = useState(0)
   const [totalAbastecimentos, setTotalAbastecimentos] = useState(0)
 
+  // ✨ NOVOS ESTADOS: Armazenam os custos reais somados em R$
+  const [custoTotalManutencao, setCustoTotalManutencao] = useState(0)
+  const [custoTotalCombustivel, setCustoTotalCombustivel] = useState(0)
+
   const isFetchingRef = useRef(false)
 
   async function carregarDashboard() {
     if (isFetchingRef.current) return
-
     isFetchingRef.current = true
 
     try {
       const [
-        { count: veiculos },
-        { count: motoristas },
-        { count: viagens },
-        { count: manutencoes },
-        { count: abastecimentos }
+        resVeiculos,
+        resMotoristas,
+        resViagens,
+        resManutencoes,
+        resAbastecimentos
       ] = await Promise.all([
         supabase
           .from('veiculos')
@@ -43,28 +46,43 @@ export default function Home() {
           .from('motoristas')
           .select('*', { count: 'exact', head: true }),
 
-        // CORREÇÃO: Removido o filtro .eq('status', 'Em Andamento') para contar todas as viagens cadastradas
         supabase
           .from('viagens')
           .select('*', { count: 'exact', head: true }),
 
+        // ✨ BUSCA DETALHADA: Trazemos os valores da coluna 'custo' para somar em dinheiro
         supabase
           .from('manutencoes')
-          .select('*', { count: 'exact', head: true }),
+          .select('custo'),
 
+        // ✨ BUSCA DETALHADA: Trazemos os valores da coluna de preço (ajuste o nome se necessário)
         supabase
           .from('abastecimentos')
-          .select('*', { count: 'exact', head: true })
+          .select('valor_total') 
       ])
 
-      setTotalVeiculos(veiculos || 0)
-      setTotalMotoristas(motoristas || 0)
-      setTotalViagens(viagens || 0)
-      setTotalManutencoes(manutencoes || 0)
-      setTotalAbastecimentos(abastecimentos || 0)
+      // 1. Definição das contagens operacionais normais
+      setTotalVeiculos(resVeiculos.count || 0)
+      setTotalMotoristas(resMotoristas.count || 0)
+      setTotalViagens(resViagens.count || 0)
+      setTotalManutencoes(resManutencoes.data?.length || 0)
+      setTotalAbastecimentos(resAbastecimentos.data?.length || 0)
+
+      // 2. ✨ CÁLCULO DE SOMA EM DINHEIRO REAL:
+      const somaManutencao = resManutencoes.data?.reduce(
+        (acc, item) => acc + Number(item.custo || 0), 0
+      ) || 0
+
+      const somaCombustivel = resAbastecimentos.data?.reduce(
+        (acc, item) => acc + Number(item.valor_total || 0), 0
+      ) || 0
+
+      setCustoTotalManutencao(somaManutencao)
+      setCustoTotalCombustivel(somaCombustivel)
+
     } catch (error) {
       console.error('Erro ao carregar dashboard:', error)
-    } finally {
+    } final {
       isFetchingRef.current = false
     }
   }
@@ -74,62 +92,15 @@ export default function Home() {
 
     const channel = supabase
       .channel('dashboard_realtime')
-
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'veiculos'
-        },
-        carregarDashboard
-      )
-
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'motoristas'
-        },
-        carregarDashboard
-      )
-
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'viagens'
-        },
-        carregarDashboard
-      )
-
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'manutencoes'
-        },
-        carregarDashboard
-      )
-
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'abastecimentos'
-        },
-        carregarDashboard
-      )
-
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'veiculos' }, carregarDashboard)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'motoristas' }, carregarDashboard)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'viagens' }, carregarDashboard)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'manutencoes' }, carregarDashboard)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'abastecimentos' }, carregarDashboard)
       .subscribe((status) => {
         console.log('Realtime Dashboard:', status)
       })
 
-    // fallback caso o websocket caia
     const interval = setInterval(() => {
       carregarDashboard()
     }, 10000)
@@ -142,10 +113,7 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-[#050505] text-white">
-      <Navbar
-        aba={aba}
-        setAba={setAba}
-      />
+      <Navbar aba={aba} setAba={setAba} />
 
       <section className="max-w-7xl mx-auto p-6">
 
@@ -157,34 +125,27 @@ export default function Home() {
               totalViagens={totalViagens}
               totalManutencoes={totalManutencoes}
               totalAbastecimentos={totalAbastecimentos}
+              custoTotalManutencao={custoTotalManutencao}   // ✨ Enviando R$ real somado
+              custoTotalCombustivel={custoTotalCombustivel} // ✨ Enviando R$ real somado
             />
 
             <div className="mt-8 bg-zinc-900 border border-zinc-800 rounded-3xl p-10">
-
               <h2 className="text-3xl font-black mb-4">
-                Bem-vindo ao LOGIX
-                <span className="text-blue-600">FLOW</span>
+                Bem-vindo ao LOGIX <span className="text-blue-600">FLOW</span>
               </h2>
-
               <p className="text-zinc-400 leading-7 max-w-2xl">
-                Sistema profissional para gerenciamento de
-                frotas, motoristas, viagens, abastecimentos
-                e manutenções, totalmente integrado com
-                Supabase e sincronização em tempo real.
+                Sistema profissional para gerenciamento de frotas, motoristas, viagens, 
+                abastecimentos e manutenções, totalmente integrado com Supabase e 
+                sincronização em tempo real.
               </p>
-
             </div>
           </>
         )}
 
         {aba === 'Frota' && <Frota />}
-
         {aba === 'Motoristas' && <Motoristas />}
-
         {aba === 'Viagens' && <Viagens />}
-
         {aba === 'Manutenções' && <Manutencoes />}
-
         {aba === 'Abastecimentos' && <Abastecimentos />}
 
       </section>
