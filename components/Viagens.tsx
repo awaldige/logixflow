@@ -31,13 +31,6 @@ interface Veiculo {
   modelo: string
 }
 
-// Tipagem para a tabela de manutenções que você mostrou
-interface Manutencao {
-  id: number
-  veiculo_id: number
-  status: string
-}
-
 const INITIAL_FORM_STATE = {
   origem: '',
   destino: '',
@@ -54,7 +47,7 @@ export default function Viagens() {
   const [viagens, setViagens] = useState<Viagem[]>([])
   const [motoristas, setMotoristas] = useState<Motorista[]>([])
   const [veiculos, setVeiculos] = useState<Veiculo[]>([])
-  const [manutencoesAtivas, setManutencoesAtivas] = useState<number[]>([]) // Guarda os IDs dos veículos em manutenção
+  const [manutencoesAtivas, setManutencoesAtivas] = useState<number[]>([]) 
   const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
   const [editId, setEditId] = useState<number | null>(null)
@@ -81,52 +74,58 @@ export default function Viagens() {
       setViagens((data as unknown as Viagem[]) || [])
     } catch (error) {
       console.error('Erro ao buscar viagens:', error)
-      alert('Não foi possível carregar as viagens.')
     } finally {
       setLoading(false)
       isFetchingRef.current = false
     }
   }, [])
 
-  // 3. BUSCA DADOS AUXILIARES (Motoristas, Veículos e Manutenções)
+  // 3. BUSCA DADOS AUXILIARES (Motoristas, Veículos e Oficina)
   const loadAuxiliaryData = useCallback(async () => {
     try {
       const [motoristasRes, veiculosRes, manutencoesRes] = await Promise.all([
         supabase.from('motoristas').select('id, nome'),
         supabase.from('veiculos').select('id, placa, modelo'),
-        // Buscando da tabela de manutenções
         supabase.from('manutencoes').select('veiculo_id, status')
       ])
 
-      // 🚨 ALERTA 1: Se der erro na tabela de manutenções, vai avisar na tela
+      // Se houver algum erro de comunicação com a tabela, gera um aviso legível
       if (manutencoesRes.error) {
-        alert(`Erro ao ler tabela de manutenções: ${manutencoesRes.error.message}\nVerifique se o nome da tabela está correto.`);
+        console.error("Erro na tabela de manutenções:", manutencoesRes.error.message)
+        alert(`Atenção: Erro ao ler tabela de manutenções. Verifique o nome da tabela no Supabase.`)
+        return
       }
 
       setMotoristas(motoristasRes.data || [])
-      setViagens([]) // Limpeza de segurança se necessário
       setVeiculos(veiculosRes.data || [])
       
-      // Filtra as manutenções que estão 'em andamento'
-      const ativas = (manutencoesRes.data || []).filter(m => m.status?.toLowerCase().trim() === 'em andamento');
+      // Filtra de forma segura aceitando "em andamento" independente de espaços ou maiúsculas
+      const ativas = (manutencoesRes.data || []).filter(
+        m => m.status?.toLowerCase().trim() === 'em andamento'
+      )
       
-      // 🚨 ALERTA 2: Vai te mostrar na tela quantos veículos ele achou em manutenção
-      alert(`O sistema encontrou ${ativas.length} veículo(s) com status 'em andamento' na oficina.`);
-
       const idsEmManutencao = ativas.map(m => m.veiculo_id)
       setManutencoesAtivas(idsEmManutencao)
 
     } catch (error) {
-      console.error('Erro ao carregar dados auxiliares:', error)
+      console.error('Erro geral no carregamento auxiliar:', error)
     }
   }, [])
 
+  // Gatilhos de carregamento primário
   useEffect(() => {
     loadAuxiliaryData()
-  }, [loadAuxiliaryData, modalOpen]) // Recarrega sempre que o modal abrir para garantir dados frescos
+    fetchData()
+  }, [loadAuxiliaryData, fetchData])
+
+  // Recarrega sempre que o modal abre ou fecha para atualizar o status dos carros
+  useEffect(() => {
+    if (modalOpen) {
+      loadAuxiliaryData()
+    }
+  }, [modalOpen, loadAuxiliaryData])
 
   useEffect(() => {
-    fetchData()
     const channel = supabase
       .channel('viagens_realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'viagens' }, () => { fetchData() })
@@ -134,12 +133,12 @@ export default function Viagens() {
     return () => { supabase.removeChannel(channel) }
   }, [fetchData])
 
-  // Mapeamento de ocupados por viagem ativa
+  // Filtros de Ocupação (Fixado e Limpo)
   const motoristasOcupadosIds = viagens
     .filter(v => v.status === 'em andamento' && v.id !== editId)
     .map(v => v.motorista_id)
 
-  const veiculosOcupadosIds = viajes = viagens
+  const veiculosOcupadosIds = viagens
     .filter(v => v.status === 'em andamento' && v.id !== editId)
     .map(v => v.veiculo_id)
 
@@ -155,23 +154,16 @@ export default function Viagens() {
 
     try {
       const hoje = new Date().toISOString().substring(0, 10)
-
       const { error } = await supabase
         .from('viagens')
-        .update({
-          status: 'concluída',
-          km_final: kmFinal,
-          data_retorno: hoje
-        })
+        .update({ status: 'concluída', km_final: kmFinal, data_retorno: hoje })
         .eq('id', id)
 
       if (error) throw error
-      
       alert('Viagem concluída com sucesso!')
       fetchData()
     } catch (error) {
       console.error('Erro ao concluir viagem:', error)
-      alert('Não foi possível concluir a viagem.')
     }
   }
 
@@ -270,7 +262,7 @@ export default function Viagens() {
         </div>
         <button 
           onClick={openCreate} 
-          className="bg-blue-600 hover:bg-blue-500 text-white transition-all px-4 py-2.5 md:px-5 md:py-3 rounded-xl md:rounded-2xl font-bold flex items-center gap-2 flex-shrink-0 text-xs md:text-sm shadow-lg shadow-blue-600/10"
+          className="bg-blue-600 hover:bg-blue-500 text-white transition-all px-4 py-2.5 md:px-5 md:py-3 rounded-xl font-bold flex items-center gap-2 flex-shrink-0 text-xs md:text-sm shadow-lg"
         >
           <Plus size={16} /> 
           <span>Nova Viagem</span>
@@ -355,7 +347,7 @@ export default function Viagens() {
                 {v.status === 'em andamento' && (
                   <button
                     onClick={() => concluirViagem(v.id)}
-                    className="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-2.5 rounded-xl text-xs md:text-sm font-black transition flex items-center justify-center gap-2 shadow-lg shadow-emerald-900/10"
+                    className="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-2.5 rounded-xl text-xs md:text-sm font-black transition flex items-center justify-center gap-2"
                   >
                     <CheckCircle size={15} />
                     Concluir Viagem
@@ -424,7 +416,7 @@ export default function Viagens() {
                 </select>
               </div>
 
-              {/* VEÍCULO (Validação Cruzada com Tabela de Viagens + Tabela de Manutenções) */}
+              {/* VEÍCULO REFORMULADO */}
               <div className="space-y-1.5">
                 <label className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">Veículo</label>
                 <select className="w-full p-3 rounded-xl bg-zinc-900 text-white border border-zinc-800 focus:outline-none focus:border-blue-500 transition text-xs sm:text-sm font-medium" value={form.veiculo_id} onChange={e => setForm({ ...form, veiculo_id: Number(e.target.value) })}>
@@ -432,10 +424,7 @@ export default function Viagens() {
                   {veiculos.map((v) => {
                     const ehOVeiculoAtualDestaViagem = v.id === form.veiculo_id;
 
-                    // 1. Checa se o veículo já está em uma viagem ativa
                     const emViagem = veiculosOcupadosIds.includes(v.id) && !ehOVeiculoAtualDestaViagem;
-                    
-                    // 2. Checa se o veículo está com alguma manutenção ativa (Baseado na sua tabela)
                     const emManutencao = manutencoesAtivas.includes(v.id);
                     
                     const estaIndisponivel = emViagem || emManutencao;
@@ -446,7 +435,7 @@ export default function Viagens() {
 
                     return (
                       <option key={v.id} value={v.id} disabled={estaIndisponivel}>
-                        🚛 {v.placa} - {v.modelo} {motivo}
+                        Txt 🚛 {v.placa} - {v.modelo} {motivo}
                       </option>
                     )
                   })}
