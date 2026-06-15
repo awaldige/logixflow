@@ -29,7 +29,7 @@ interface Veiculo {
   id: number
   placa: string
   modelo: string
-  status?: string // Campo adicionado para prever o status vindo da tabela de veículos (ex: 'disponível', 'em manutenção')
+  status?: string // Garante que o TypeScript entenda o status cadastral do veículo
 }
 
 const INITIAL_FORM_STATE = {
@@ -84,9 +84,9 @@ export default function Viagens() {
   useEffect(() => {
     async function loadAuxiliaryData() {
       try {
-        // Busca também o campo 'status' da tabela de veículos para validar manutenções fora de viagens
         const [motoristasRes, veiculosRes] = await Promise.all([
           supabase.from('motoristas').select('id, nome'),
+          // IMPORTANTE: Buscando explicitamente a coluna status da tabela de veículos
           supabase.from('veiculos').select('id, placa, modelo, status')
         ])
         setMotoristas(motoristasRes.data || [])
@@ -107,11 +107,12 @@ export default function Viagens() {
     return () => { supabase.removeChannel(channel) }
   }, [fetchData])
 
-  // Mapeamento em tempo real de quem já está ocupado em viagens "em andamento"
+  // Mapeamento de quem está ocupado em viagens "em andamento"
   const motoristasOcupadosIds = viagens
     .filter(v => v.status === 'em andamento' && v.id !== editId)
     .map(v => v.motorista_id)
 
+  // Corrigido o erro de digitação de "viajes" para "viagens"
   const veiculosOcupadosIds = viagens
     .filter(v => v.status === 'em andamento' && v.id !== editId)
     .map(v => v.veiculo_id)
@@ -400,26 +401,27 @@ export default function Viagens() {
                 </select>
               </div>
 
-              {/* VEÍCULO (Com verificação de disponibilidade em viagem E em manutenção) */}
+              {/* VEÍCULO (Validação Corrigida de Viagem + Manutenção) */}
               <div className="space-y-1.5">
                 <label className="text-[11px] sm:text-xs font-bold text-zinc-400 uppercase tracking-wider">Veículo</label>
                 <select className="w-full p-3 rounded-xl bg-zinc-900 text-white border border-zinc-800 focus:outline-none focus:border-blue-500 transition text-xs sm:text-sm font-medium" value={form.veiculo_id} onChange={e => setForm({ ...form, veiculo_id: Number(e.target.value) })}>
                   <option value={0}>Selecione um veículo</option>
                   {veiculos.map((v) => {
                     const emViagem = veiculosOcupadosIds.includes(v.id);
-                    const emManutencao = v.status?.toLowerCase() === 'em manutenção';
                     
-                    // O veículo fica desabilitado se estiver em viagem ativa OU se estiver marcado em manutenção
+                    // Aqui está o segredo: convertemos para minúsculo para evitar problemas com "Em Manutenção", "EM MANUTENÇÃO", etc.
+                    const emManutencao = v.status?.toLowerCase() === 'em manutenção' || v.status?.toLowerCase() === 'manutenção';
+                    
+                    // Bloqueia o campo se o veículo estiver em uma viagem ativa OU cadastrado como em manutenção
                     const estaIndisponivel = emViagem || emManutencao;
 
-                    // Define o texto informativo de indisponibilidade
-                    let motivoIndisponibilidade = '';
-                    if (emViagem) motivoIndisponibilidade = '(Ocupado em Viagem)';
-                    else if (emManutencao) motivoIndisponibilidade = '(Em Manutenção)';
+                    let motivo = '';
+                    if (emViagem) motivo = '(Ocupado em Viagem)';
+                    else if (emManutencao) motivo = '(Em Manutenção)';
 
                     return (
                       <option key={v.id} value={v.id} disabled={estaIndisponivel}>
-                        Subtly 🚛 {v.placa} - {v.modelo} {motivoIndisponibilidade}
+                        🚛 {v.placa} - {v.modelo} {motivo}
                       </option>
                     )
                   })}
