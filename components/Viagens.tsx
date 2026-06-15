@@ -17,7 +17,7 @@ interface Viagem {
   km_inicial: number
   km_final: number | null
   motoristas: { nome: string } | { nome: string }[] | null
-  veiculos: { placa: string; modelo: string; status?: string } | { placa: string; modelo: string; status?: string }[] | null
+  veiculos: { placa: string; modelo: string } | { placa: string; modelo: string }[] | null
 }
 
 interface Motorista {
@@ -29,7 +29,13 @@ interface Veiculo {
   id: number
   placa: string
   modelo: string
-  status?: string // Garante que o TypeScript entenda o status cadastral do veículo
+}
+
+// Tipagem para a tabela de manutenções que você mostrou
+interface Manutencao {
+  id: number
+  veiculo_id: number
+  status: string
 }
 
 const INITIAL_FORM_STATE = {
@@ -48,6 +54,7 @@ export default function Viagens() {
   const [viagens, setViagens] = useState<Viagem[]>([])
   const [motoristas, setMotoristas] = useState<Motorista[]>([])
   const [veiculos, setVeiculos] = useState<Veiculo[]>([])
+  const [manutencoesAtivas, setManutencoesAtivas] = useState<number[]>([]) // Guarda os IDs dos veículos em manutenção
   const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
   const [editId, setEditId] = useState<number | null>(null)
@@ -55,7 +62,7 @@ export default function Viagens() {
 
   const isFetchingRef = useRef(false)
 
-  // 2. BUSCA DE DADOS
+  // 2. BUSCA DE VIAGENS
   const fetchData = useCallback(async () => {
     if (isFetchingRef.current) return
     isFetchingRef.current = true
@@ -66,7 +73,7 @@ export default function Viagens() {
         .select(`
           id, origem, destino, veiculo_id, motorista_id,
           data_saida, data_retorno, status, km_inicial, km_final,
-          motoristas ( nome ), veiculos ( placa, modelo, status )
+          motoristas ( nome ), veiculos ( placa, modelo )
         `)
         .order("data_saida", { ascending: false })
 
@@ -81,22 +88,31 @@ export default function Viagens() {
     }
   }, [])
 
-  useEffect(() => {
-    async function loadAuxiliaryData() {
-      try {
-        const [motoristasRes, veiculosRes] = await Promise.all([
-          supabase.from('motoristas').select('id, nome'),
-          // IMPORTANTE: Buscando explicitamente a coluna status da tabela de veículos
-          supabase.from('veiculos').select('id, placa, modelo, status')
-        ])
-        setMotoristas(motoristasRes.data || [])
-        setVeiculos(veiculosRes.data || [])
-      } catch (error) {
-        console.error('Erro ao carregar dados auxiliares:', error)
-      }
+  // 3. BUSCA DADOS AUXILIARES (Motoristas, Veículos e Manutenções)
+  const loadAuxiliaryData = useCallback(async () => {
+    try {
+      const [motoristasRes, veiculosRes, manutencoesRes] = await Promise.all([
+        supabase.from('motoristas').select('id, nome'),
+        supabase.from('veiculos').select('id, placa, modelo'),
+        // Busca na tabela de manutenções apenas as que estão 'em andamento'
+        supabase.from('manutencoes').select('veiculo_id, status').eq('status', 'em andamento')
+      ])
+
+      setMotoristas(motoristasRes.data || [])
+      setVeiculos(veiculosRes.data || [])
+      
+      // Mapeia e salva apenas os IDs dos veículos que estão presos na oficina
+      const idsEmManutencao = (manutencoesRes.data || []).map(m => m.veiculo_id)
+      setManutencoesAtivas(idsEmManutencao)
+
+    } catch (error) {
+      console.error('Erro ao carregar dados auxiliares:', error)
     }
-    loadAuxiliaryData()
   }, [])
+
+  useEffect(() => {
+    loadAuxiliaryData()
+  }, [loadAuxiliaryData, modalOpen]) // Recarrega sempre que o modal abrir para garantir dados frescos
 
   useEffect(() => {
     fetchData()
@@ -107,17 +123,16 @@ export default function Viagens() {
     return () => { supabase.removeChannel(channel) }
   }, [fetchData])
 
-  // Mapeamento de quem está ocupado em viagens "em andamento"
+  // Mapeamento de ocupados por viagem ativa
   const motoristasOcupadosIds = viagens
     .filter(v => v.status === 'em andamento' && v.id !== editId)
     .map(v => v.motorista_id)
 
-  // Corrigido o erro de digitação de "viajes" para "viagens"
-  const veiculosOcupadosIds = viagens
+  const veiculosOcupadosIds = viajes = viagens
     .filter(v => v.status === 'em andamento' && v.id !== editId)
     .map(v => v.veiculo_id)
 
-  // 3. FUNÇÃO PARA CONCLUIR A VIAGEM
+  // 4. FUNÇÃO PARA CONCLUIR A VIAGEM
   async function concluirViagem(id: number) {
     const kmFinalStr = prompt('Digite o KM Final para concluir a viagem:')
     if (kmFinalStr === null) return 
@@ -236,7 +251,7 @@ export default function Viagens() {
 
   return (
     <div className="space-y-6 p-4 md:p-6 max-w-7xl mx-auto text-white">
-      {/* HEADER RESPONSIVO */}
+      {/* HEADER */}
       <div className="flex items-center justify-between gap-4">
         <div className="min-w-0">
           <h2 className="text-2xl md:text-3xl font-black text-white tracking-tight truncate">Viagens</h2>
@@ -252,20 +267,20 @@ export default function Viagens() {
       </div>
 
       {loading && (
-        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl md:rounded-3xl p-8 text-zinc-400 animate-pulse">
+        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8 text-zinc-400 animate-pulse">
           Carregando viagens...
         </div>
       )}
 
-      {/* GRID DE CARDS RESPONSIVO */}
+      {/* CARDS */}
       {!loading && (
         <div className="grid gap-4 md:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
           {viagens.map((v) => (
-            <div key={v.id} className="bg-zinc-900 border border-zinc-800/80 rounded-2xl md:rounded-3xl p-5 md:p-6 flex flex-col justify-between hover:border-zinc-700 transition duration-300 shadow-xl min-w-0">
+            <div key={v.id} className="bg-zinc-900 border border-zinc-800/80 rounded-2xl p-5 flex flex-col justify-between hover:border-zinc-700 transition duration-300 shadow-xl min-w-0">
               <div>
                 <div className="flex items-center justify-between border-b border-zinc-800/60 pb-3 mb-4 gap-2">
                   <span className="text-zinc-500 font-bold text-xs md:text-sm">Viagem #{v.id}</span>
-                  <span className={`px-2.5 py-0.5 md:px-3 md:py-1 rounded-lg md:rounded-xl text-[10px] md:text-xs font-black uppercase tracking-wider flex-shrink-0 ${
+                  <span className={`px-2.5 py-0.5 rounded-lg text-[10px] md:text-xs font-black uppercase tracking-wider flex-shrink-0 ${
                     v.status === 'em andamento' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' :
                     v.status === 'concluída' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
                     'bg-zinc-800 text-zinc-400'
@@ -274,52 +289,50 @@ export default function Viagens() {
                   </span>
                 </div>
 
-                {/* Rotas */}
                 <div className="space-y-3 mb-5">
                   <div className="flex items-start gap-2 min-w-0">
                     <Navigation size={16} className="text-blue-500 mt-1 flex-shrink-0" />
                     <div className="min-w-0 flex-1">
-                      <p className="text-[9px] md:text-[10px] text-zinc-500 font-bold uppercase tracking-wider">Origem</p>
-                      <p className="text-white font-bold text-sm md:text-base truncate" title={v.origem}>{v.origem}</p>
+                      <p className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider">Origem</p>
+                      <p className="text-white font-bold text-sm md:text-base truncate">{v.origem}</p>
                     </div>
                   </div>
                   
                   <div className="flex items-start gap-2 min-w-0">
                     <MapPin size={16} className="text-red-500 mt-1 flex-shrink-0" />
                     <div className="min-w-0 flex-1">
-                      <p className="text-[9px] md:text-[10px] text-zinc-500 font-bold uppercase tracking-wider">Destino</p>
-                      <p className="text-white font-bold text-sm md:text-base truncate" title={v.destino}>{v.destino}</p>
+                      <p className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider">Destino</p>
+                      <p className="text-white font-bold text-sm md:text-base truncate">{v.destino}</p>
                     </div>
                   </div>
                 </div>
 
-                {/* Painel Informativo Interno */}
-                <div className="bg-zinc-950/40 rounded-xl md:rounded-2xl p-3 md:p-4 space-y-2 text-xs md:text-sm text-zinc-400 border border-zinc-800/40">
+                <div className="bg-zinc-950/40 rounded-xl p-3 space-y-2 text-xs md:text-sm text-zinc-400 border border-zinc-800/40">
                   <p className="flex justify-between items-center gap-2 min-w-0">
                     <span className="text-zinc-500 font-medium flex-shrink-0">Motorista:</span> 
-                    <span className="text-white font-semibold truncate text-right flex-1" title={getMotoristaNome(v)}>{getMotoristaNome(v)}</span>
+                    <span className="text-white font-semibold truncate text-right flex-1">{getMotoristaNome(v)}</span>
                   </p>
                   <p className="flex justify-between items-center gap-2 min-w-0">
                     <span className="text-zinc-500 font-medium flex-shrink-0">Veículo:</span> 
-                    <span className="text-white font-semibold truncate text-right flex-1" title={getVeiculoTexto(v)}>{getVeiculoTexto(v)}</span>
+                    <span className="text-white font-semibold truncate text-right flex-1">{getVeiculoTexto(v)}</span>
                   </p>
                   <hr className="border-zinc-800/40 my-1" />
-                  <p className="flex justify-between text-xs md:text-sm">
+                  <p className="flex justify-between text-xs">
                     <span className="text-zinc-500 font-medium">KM Inicial:</span> 
                     <span className="text-white font-semibold font-mono">{v.km_inicial.toLocaleString('pt-BR')} km</span>
                   </p>
                   {v.km_final && (
-                    <p className="flex justify-between text-xs md:text-sm">
+                    <p className="flex justify-between text-xs">
                       <span className="text-zinc-500 font-medium">KM Final:</span> 
                       <span className="text-emerald-400 font-semibold font-mono">{v.km_final.toLocaleString('pt-BR')} km</span>
                     </p>
                   )}
-                  <p className="flex justify-between text-xs md:text-sm">
+                  <p className="flex justify-between text-xs">
                     <span className="text-zinc-500 font-medium">Saída:</span> 
                     <span className="text-white font-semibold font-mono">{formatarData(v.data_saida)}</span>
                   </p>
                   {v.data_retorno && (
-                    <p className="flex justify-between text-xs md:text-sm">
+                    <p className="flex justify-between text-xs">
                       <span className="text-zinc-500 font-medium">Retorno:</span> 
                       <span className="text-white font-semibold font-mono">{formatarData(v.data_retorno)}</span>
                     </p>
@@ -327,12 +340,11 @@ export default function Viagens() {
                 </div>
               </div>
 
-              {/* Ações */}
-              <div className="space-y-2 mt-5 md:mt-6">
+              <div className="space-y-2 mt-5">
                 {v.status === 'em andamento' && (
                   <button
                     onClick={() => concluirViagem(v.id)}
-                    className="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-2.5 md:py-3 rounded-xl text-xs md:text-sm font-black transition flex items-center justify-center gap-2 shadow-lg shadow-emerald-900/10"
+                    className="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-2.5 rounded-xl text-xs md:text-sm font-black transition flex items-center justify-center gap-2 shadow-lg shadow-emerald-900/10"
                   >
                     <CheckCircle size={15} />
                     Concluir Viagem
@@ -340,10 +352,10 @@ export default function Viagens() {
                 )}
 
                 <div className="flex gap-2">
-                  <button onClick={() => openEdit(v)} className="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-4 py-2 md:py-2.5 rounded-xl text-xs font-bold transition flex-1">
+                  <button onClick={() => openEdit(v)} className="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-4 py-2 rounded-xl text-xs font-bold transition flex-1">
                     Editar
                   </button>
-                  <button onClick={() => deleteViagem(v.id)} className="bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/10 px-4 py-2 md:py-2.5 rounded-xl text-xs font-bold transition flex-1">
+                  <button onClick={() => deleteViagem(v.id)} className="bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/10 px-4 py-2 rounded-xl text-xs font-bold transition flex-1">
                     Excluir
                   </button>
                 </div>
@@ -353,10 +365,10 @@ export default function Viagens() {
         </div>
       )}
 
-      {/* MODAL RESPONSIVO */}
+      {/* MODAL */}
       {modalOpen && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-4 animate-all">
-          <div className="bg-zinc-950 p-5 sm:p-8 border border-zinc-800/80 rounded-2xl sm:rounded-3xl w-full max-w-xl space-y-5 relative text-zinc-300 max-h-[calc(100vh-2rem)] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-4">
+          <div className="bg-zinc-950 p-5 sm:p-8 border border-zinc-800/80 rounded-2xl w-full max-w-xl space-y-5 relative text-zinc-300 max-h-[calc(100vh-2rem)] overflow-y-auto">
             
             <button 
               onClick={() => { setModalOpen(false); resetForm(); }}
@@ -375,19 +387,19 @@ export default function Viagens() {
             <div className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-[11px] sm:text-xs font-bold text-zinc-400 uppercase tracking-wider">Origem *</label>
+                  <label className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">Origem *</label>
                   <input className="w-full p-3 rounded-xl bg-zinc-900 text-white border border-zinc-800 focus:outline-none focus:border-blue-500 transition text-xs sm:text-sm font-medium" placeholder="Ponto de partida" value={form.origem} onChange={e => setForm({ ...form, origem: e.target.value })} />
                 </div>
                 
                 <div className="space-y-1.5">
-                  <label className="text-[11px] sm:text-xs font-bold text-zinc-400 uppercase tracking-wider">Destino *</label>
+                  <label className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">Destino *</label>
                   <input className="w-full p-3 rounded-xl bg-zinc-900 text-white border border-zinc-800 focus:outline-none focus:border-blue-500 transition text-xs sm:text-sm font-medium" placeholder="Destino final" value={form.destino} onChange={e => setForm({ ...form, destino: e.target.value })} />
                 </div>
               </div>
 
-              {/* MOTORISTA (Com verificação de disponibilidade) */}
+              {/* MOTORISTA */}
               <div className="space-y-1.5">
-                <label className="text-[11px] sm:text-xs font-bold text-zinc-400 uppercase tracking-wider">Motorista</label>
+                <label className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">Motorista</label>
                 <select className="w-full p-3 rounded-xl bg-zinc-900 text-white border border-zinc-800 focus:outline-none focus:border-blue-500 transition text-xs sm:text-sm font-medium" value={form.motorista_id} onChange={e => setForm({ ...form, motorista_id: Number(e.target.value) })}>
                   <option value={0}>Selecione um motorista</option>
                   {motoristas.map((m) => {
@@ -401,18 +413,20 @@ export default function Viagens() {
                 </select>
               </div>
 
-              {/* VEÍCULO (Validação Corrigida de Viagem + Manutenção) */}
+              {/* VEÍCULO (Validação Cruzada com Tabela de Viagens + Tabela de Manutenções) */}
               <div className="space-y-1.5">
-                <label className="text-[11px] sm:text-xs font-bold text-zinc-400 uppercase tracking-wider">Veículo</label>
+                <label className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">Veículo</label>
                 <select className="w-full p-3 rounded-xl bg-zinc-900 text-white border border-zinc-800 focus:outline-none focus:border-blue-500 transition text-xs sm:text-sm font-medium" value={form.veiculo_id} onChange={e => setForm({ ...form, veiculo_id: Number(e.target.value) })}>
                   <option value={0}>Selecione um veículo</option>
                   {veiculos.map((v) => {
-                    const emViagem = veiculosOcupadosIds.includes(v.id);
+                    const ehOVeiculoAtualDestaViagem = v.id === form.veiculo_id;
+
+                    // 1. Checa se o veículo já está em uma viagem ativa
+                    const emViagem = veiculosOcupadosIds.includes(v.id) && !ehOVeiculoAtualDestaViagem;
                     
-                    // Aqui está o segredo: convertemos para minúsculo para evitar problemas com "Em Manutenção", "EM MANUTENÇÃO", etc.
-                    const emManutencao = v.status?.toLowerCase() === 'em manutenção' || v.status?.toLowerCase() === 'manutenção';
+                    // 2. Checa se o veículo está com alguma manutenção ativa (Baseado na sua tabela)
+                    const emManutencao = manutencoesAtivas.includes(v.id);
                     
-                    // Bloqueia o campo se o veículo estiver em uma viagem ativa OU cadastrado como em manutenção
                     const estaIndisponivel = emViagem || emManutencao;
 
                     let motivo = '';
@@ -430,18 +444,18 @@ export default function Viagens() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-[11px] sm:text-xs font-bold text-zinc-400 uppercase tracking-wider">Data Saída *</label>
+                  <label className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">Data Saída *</label>
                   <input type="date" className="w-full p-3 rounded-xl bg-zinc-900 text-white border border-zinc-800 focus:outline-none focus:border-blue-500 transition text-xs sm:text-sm font-mono" value={form.data_saida} onChange={e => setForm({ ...form, data_saida: e.target.value })} />
                 </div>
                 
                 <div className="space-y-1.5">
-                  <label className="text-[11px] sm:text-xs font-bold text-zinc-400 uppercase tracking-wider">KM Inicial</label>
+                  <label className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">KM Inicial</label>
                   <input type="number" className="w-full p-3 rounded-xl bg-zinc-900 text-white border border-zinc-800 focus:outline-none focus:border-blue-500 transition text-xs sm:text-sm font-mono" placeholder="Ex: 142000" value={form.km_inicial || ''} onChange={e => setForm({ ...form, km_inicial: Number(e.target.value) })} />
                 </div>
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-[11px] sm:text-xs font-bold text-zinc-400 uppercase tracking-wider">Status do Fluxo</label>
+                <label className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">Status do Fluxo</label>
                 <select className="w-full p-3 rounded-xl bg-zinc-900 text-white border border-zinc-800 focus:outline-none focus:border-blue-500 transition text-xs sm:text-sm font-medium" value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}>
                   <option value="em andamento">Em andamento</option>
                   <option value="concluída">Concluída</option>
@@ -450,20 +464,11 @@ export default function Viagens() {
               </div>
             </div>
 
-            {/* BOTÕES DE AÇÃO DO FORMULÁRIO */}
             <div className="flex justify-end gap-3 pt-4 border-t border-zinc-900">
-              <button 
-                type="button"
-                onClick={() => { setModalOpen(false); resetForm(); }} 
-                className="px-4 py-2.5 bg-zinc-900 hover:bg-zinc-850 text-zinc-400 hover:text-white rounded-xl font-medium transition text-xs sm:text-sm"
-              >
+              <button type="button" onClick={() => { setModalOpen(false); resetForm(); }} className="px-4 py-2.5 bg-zinc-900 text-zinc-400 hover:text-white rounded-xl font-medium transition text-xs sm:text-sm">
                 Cancelar
               </button>
-              <button 
-                type="button"
-                onClick={saveViagem} 
-                className="px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold transition text-xs sm:text-sm shadow-lg shadow-blue-600/10"
-              >
+              <button type="button" onClick={saveViagem} className="px-4 py-2.5 bg-blue-600 text-white rounded-xl font-bold transition text-xs sm:text-sm shadow-lg">
                 Salvar
               </button>
             </div>
