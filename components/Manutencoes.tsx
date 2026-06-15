@@ -40,7 +40,6 @@ export default function Manutencoes() {
 
   const isFetchingRef = useRef(false)
 
-  // Busca Principal incluindo dados do Veículo vinculado
   const fetchData = useCallback(async () => {
     if (isFetchingRef.current) return
     isFetchingRef.current = true
@@ -65,7 +64,6 @@ export default function Manutencoes() {
     }
   }, [])
 
-  // Carrega lista auxiliar de veículos para o Select do formulário
   useEffect(() => {
     async function loadVeiculos() {
       try {
@@ -91,15 +89,23 @@ export default function Manutencoes() {
     }
   }, [fetchData])
 
-  // Botão rápido para conclusão direta no Card
-  async function concluirManutencao(id: number) {
+  // Botão rápido para conclusão direta no Card mudando o veículo para 'ativo'
+  async function concluirManutencao(id: number, veiculoId: number) {
     try {
-      const { error } = await supabase
+      // 1. Atualiza o status da manutenção
+      const { error: manutencaoError } = await supabase
         .from('manutencoes')
         .update({ status: 'concluida' })
         .eq('id', id)
 
-      if (error) throw error
+      if (manutencaoError) throw manutencaoError
+
+      // 2. Libera o veículo de volta para a frota como 'ativo'
+      await supabase
+        .from('veiculos')
+        .update({ status: 'ativo' })
+        .eq('id', veiculoId)
+
       fetchData()
     } catch (error) {
       console.error('Erro ao concluir manutenção:', error)
@@ -149,6 +155,15 @@ export default function Manutencoes() {
       }
 
       if (error) throw error
+
+      // ✨ SINCRO DE STATUS COM A FROTA:
+      // Se a manutenção for pendente ou em andamento, joga o veículo para 'manutencao'.
+      // Se for salva direto como concluída, garante que o veículo fique 'ativo'.
+      const novoStatusVeiculo = form.status === 'concluida' ? 'ativo' : 'manutencao'
+      await supabase
+        .from('veiculos')
+        .update({ status: novoStatusVeiculo })
+        .eq('id', form.veiculo_id)
 
       setModalOpen(false)
       resetForm()
@@ -244,7 +259,7 @@ export default function Manutencoes() {
               <div className="space-y-2 mt-6">
                 {m.status !== 'concluida' && (
                   <button
-                    onClick={() => concluirManutencao(m.id)}
+                    onClick={() => concluirManutencao(m.id, m.veiculo_id)}
                     className="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-2.5 rounded-xl text-xs font-black transition flex items-center justify-center gap-2 shadow-lg shadow-emerald-900/10"
                   >
                     <CheckCircle size={14} />
@@ -266,7 +281,7 @@ export default function Manutencoes() {
         </div>
       )}
 
-      {/* MODAL RESPONSIVO */}
+      {/* MODAL */}
       {modalOpen && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 transition-all">
           <div className="bg-zinc-950 p-6 sm:p-8 rounded-3xl w-full max-w-xl space-y-6 border border-zinc-800 shadow-2xl relative text-zinc-300">
@@ -286,7 +301,6 @@ export default function Manutencoes() {
             </div>
 
             <div className="space-y-4">
-              {/* SELECT DO VEÍCULO (Substituindo o Input de ID) */}
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Veículo *</label>
                 <select 
