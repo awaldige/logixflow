@@ -91,6 +91,8 @@ export default function Manutencoes() {
 
   // Botão rápido para conclusão direta no Card mudando o veículo para 'ativo'
   async function concluirManutencao(id: number, veiculoId: number) {
+    if (!veiculoId) return alert('ID do veículo inválido para conclusão.');
+
     try {
       // 1. Atualiza o status da manutenção
       const { error: manutencaoError } = await supabase
@@ -101,15 +103,20 @@ export default function Manutencoes() {
       if (manutencaoError) throw manutencaoError
 
       // 2. Libera o veículo de volta para a frota como 'ativo'
-      await supabase
+      const { error: veiculoError } = await supabase
         .from('veiculos')
         .update({ status: 'ativo' })
-        .eq('id', veiculoId)
+        .eq('id', Number(veiculoId))
+
+      if (veiculoError) {
+        console.warn('Manutenção concluída, mas falhou ao ativar veículo:', veiculoError)
+        alert('Manutenção concluída! No entanto, o veículo não mudou para Disponível automaticamente por restrições do banco. Altere-o manualmente se necessário.')
+      }
 
       fetchData()
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao concluir manutenção:', error)
-      alert('Não foi possível concluir a manutenção.')
+      alert(`Não foi possível concluir a manutenção: ${error.message || error}`)
     }
   }
 
@@ -130,14 +137,16 @@ export default function Manutencoes() {
   }
 
   async function saveManutencao() {
-    if (!form.veiculo_id || form.veiculo_id === 0) return alert('Por favor, selecione o veículo.')
+    const idDoVeiculo = Number(form.veiculo_id)
+
+    if (!idDoVeiculo || idDoVeiculo === 0) return alert('Por favor, selecione o veículo.')
     if (!form.descricao.trim()) return alert('Por favor, informe a descrição.')
     if (!form.data_manutencao) return alert('Por favor, selecione a data.')
     if (!form.custo) return alert('Por favor, informe o custo.')
 
     try {
       const payload = {
-        veiculo_id: Number(form.veiculo_id),
+        veiculo_id: idDoVeiculo,
         descricao: form.descricao,
         data_manutencao: form.data_manutencao,
         custo: Number(form.custo),
@@ -157,19 +166,24 @@ export default function Manutencoes() {
       if (error) throw error
 
       // ✨ SINCRO DE STATUS COM A FROTA:
-      // Se a manutenção for pendente ou em andamento, joga o veículo para 'manutencao'.
-      // Se for salva direto como concluída, garante que o veículo fique 'ativo'.
       const novoStatusVeiculo = form.status === 'concluida' ? 'ativo' : 'manutencao'
-      await supabase
+      
+      const { error: errorVeiculo } = await supabase
         .from('veiculos')
         .update({ status: novoStatusVeiculo })
-        .eq('id', form.veiculo_id)
+        .eq('id', idDoVeiculo)
+
+      if (errorVeiculo) {
+        console.warn('Manutenção salva, mas falhou ao atualizar status do veículo:', errorVeiculo)
+        alert('Manutenção registrada com sucesso! No entanto, o status do veículo na Frota não mudou sozinho devido a políticas do banco. Modifique-o na tela de frotas manualmente.')
+      }
 
       setModalOpen(false)
       resetForm()
       fetchData()
     } catch (error: any) {
-      console.error(error)
+      console.error('Erro ao salvar manutenção:', error)
+      alert(`Erro ao salvar: ${error.message || error}`)
     }
   }
 
@@ -310,7 +324,7 @@ export default function Manutencoes() {
                 >
                   <option value={0}>Selecione um veículo da frota</option>
                   {veiculos.map((v) => (
-                    <option key={v.id} value={v.id}>🚛 {v.modelo} — ({v.placa})</option>
+                    <option key={v.id} value={v.id}> 🚛 {v.modelo} — ({v.placa})</option>
                   ))}
                 </select>
               </div>
