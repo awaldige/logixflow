@@ -435,7 +435,7 @@ export default function Viagens() {
 
                     return (
                       <option key={v.id} value={v.id} disabled={estaIndisponivel}>
-                        Txt 🚛 {v.placa} - {v.modelo} {motivo}
+                          🚛 {v.placa} - {v.modelo} {motivo}
                       </option>
                     )
                   })}
