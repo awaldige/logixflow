@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { Plus, Fuel, Gauge, User, Trash2 } from 'lucide-react'
+import { Plus, Fuel, Gauge, User, Trash2, X } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
 // 1. TIPAGENS INTEGRADAS
@@ -58,7 +58,7 @@ export default function Abastecimentos() {
         .select(`
           id, viagem_id, litros, valor_litro, total, local_abastecimento, created_at,
           viagens (
-            id, origem, destino,
+            id, origen, destino,
             veiculos ( placa, modelo ),
             motoristas ( nome )
           )
@@ -128,13 +128,12 @@ export default function Abastecimentos() {
     setModalOpen(true)
   }
 
-  // 4. SALVAMENTO ADAPTADO (REMOVIDO O CAMPO 'total' DO PAYLOAD)
+  // 4. SALVAMENTO ADAPTADO
   async function saveAbastecimento() {
     if (!form.viagem_id) return alert('Selecione uma viagem vinculada.')
     if (!form.litros || !form.valor_litro) return alert('Preencha os valores de litros e preço.')
 
     try {
-      // Enviando apenas campos existentes e permitidos para escrita física no banco
       const payload = {
         viagem_id: Number(form.viagem_id),
         litros: Number(form.litros),
@@ -174,7 +173,6 @@ export default function Abastecimentos() {
     }
   }
 
-  // HELPERS PARA PEGAR DADOS DAS RELAÇÕES
   const getVeiculoInfo = (item: Abastecimento) => {
     const v = item.viagens
     if (!v) return 'Não identificado'
@@ -192,70 +190,89 @@ export default function Abastecimentos() {
   }
 
   return (
-    <div className="space-y-6 p-6 max-w-7xl mx-auto text-white">
-      {/* HEADER */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-3xl font-black text-white">Abastecimentos Nova Versão</h2>
-          <p className="text-zinc-500 mt-1">Controle dos abastecimentos realizados.</p>
+    <div className="space-y-6 p-4 md:p-6 max-w-7xl mx-auto text-white">
+      
+      {/* HEADER RESPONSIVO */}
+      <div className="flex items-center justify-between gap-4">
+        <div className="min-w-0">
+          <h2 className="text-2xl md:text-3xl font-black text-white tracking-tight truncate">Abastecimentos</h2>
+          <p className="text-zinc-500 text-xs md:text-sm mt-1 truncate">Controle dos abastecimentos realizados.</p>
         </div>
-        <button onClick={openCreate} className="bg-blue-600 hover:bg-blue-500 transition px-5 py-3 rounded-2xl font-bold flex items-center gap-2">
-          <Plus size={18} /> Novo Abastecimento
+        <button 
+          onClick={openCreate} 
+          className="bg-blue-600 hover:bg-blue-500 transition px-4 py-2.5 md:px-5 md:py-3 rounded-xl md:rounded-2xl font-bold flex items-center gap-2 flex-shrink-0 text-xs md:text-sm shadow-lg shadow-blue-600/10"
+        >
+          <Plus size={16} /> 
+          <span className="hidden sm:inline">Novo Abastecimento</span>
         </button>
       </div>
 
-      {loading && <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-8 text-zinc-400">Carregando abastecimentos...</div>}
+      {loading && (
+        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl md:rounded-3xl p-8 text-zinc-400 animate-pulse">
+          Carregando abastecimentos...
+        </div>
+      )}
 
-      {/* GRID DE CARDS ESTILIZADOS */}
+      {/* GRID DE CARDS RESPONSIVO (1 Coluna no Mobile, 2 no Tablet, 3 no Computador) */}
       {!loading && (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 md:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
           {abastecimentos.map((item) => (
-            <div key={item.id} className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 flex flex-col justify-between hover:border-zinc-700 transition">
+            <div key={item.id} className="bg-zinc-900 border border-zinc-800/80 rounded-2xl md:rounded-3xl p-5 md:p-6 flex flex-col justify-between hover:border-zinc-700 transition duration-300 shadow-xl min-w-0">
               <div>
-                <div className="flex items-center justify-between border-b border-zinc-800 pb-3 mb-4">
-                  <span className="text-zinc-500 font-bold text-sm">Cupom #{item.id}</span>
-                  <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-3 py-1 rounded-xl text-xs font-black uppercase tracking-wider">
+                <div className="flex items-center justify-between border-b border-zinc-800/60 pb-3 mb-4 gap-2">
+                  <span className="text-zinc-500 font-bold text-xs md:text-sm">Cupom #{item.id}</span>
+                  <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2.5 py-0.5 md:px-3 md:py-1 rounded-lg md:rounded-xl text-[10px] md:text-xs font-black uppercase tracking-wider flex-shrink-0">
                     Viagem #{item.viagem_id}
                   </span>
                 </div>
 
                 {/* Localização e Posto */}
                 <div className="space-y-3 mb-4">
-                  <div className="flex items-start gap-2">
+                  <div className="flex items-start gap-2 min-w-0">
                     <Fuel size={16} className="text-blue-500 mt-1 flex-shrink-0" />
-                    <div>
-                      <p className="text-xs text-zinc-500 font-medium uppercase">Estabelecimento</p>
-                      <p className="text-white font-bold text-base truncate max-w-[220px]">{item.local_abastecimento}</p>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[9px] md:text-[10px] text-zinc-500 font-bold uppercase tracking-wider">Estabelecimento</p>
+                      <p className="text-white font-bold text-sm md:text-base truncate" title={item.local_abastecimento}>
+                        {item.local_abastecimento}
+                      </p>
                     </div>
                   </div>
                 </div>
 
-                {/* Informações cruzadas automaticamente */}
-                <div className="bg-zinc-950/40 rounded-2xl p-4 space-y-2 text-sm text-zinc-400 border border-zinc-800/50">
-                  <p className="flex justify-between items-center">
-                    <span className="flex items-center gap-1.5 text-xs"><User size={13} /> Motorista:</span>
-                    <span className="text-white font-semibold truncate max-w-[150px]">{getMotoristaInfo(item)}</span>
+                {/* Informações Cruzadas */}
+                <div className="bg-zinc-950/40 rounded-xl md:rounded-2xl p-3 md:p-4 space-y-2 text-xs md:text-sm text-zinc-400 border border-zinc-800/40">
+                  <p className="flex justify-between items-center gap-2 min-w-0">
+                    <span className="flex items-center gap-1.5 text-zinc-500 text-xs font-medium flex-shrink-0"><User size={13} /> Motorista:</span>
+                    <span className="text-white font-semibold truncate text-right flex-1" title={getMotoristaInfo(item)}>{getMotoristaInfo(item)}</span>
                   </p>
-                  <p className="flex justify-between items-center">
-                    <span className="flex items-center gap-1.5 text-xs"><Gauge size={13} /> Veículo:</span>
-                    <span className="text-white font-semibold truncate max-w-[150px]">{getVeiculoInfo(item)}</span>
+                  <p className="flex justify-between items-center gap-2 min-w-0">
+                    <span className="flex items-center gap-1.5 text-zinc-500 text-xs font-medium flex-shrink-0"><Gauge size={13} /> Veículo:</span>
+                    <span className="text-white font-semibold truncate text-right flex-1" title={getVeiculoInfo(item)}>{getVeiculoInfo(item)}</span>
                   </p>
-                  <hr className="border-zinc-800/60 my-1" />
-                  <p className="flex justify-between"><span>Litros:</span> <span className="text-white font-semibold">{item.litros} L</span></p>
-                  <p className="flex justify-between"><span>Preço/Litro:</span> <span className="text-white font-semibold">R$ {Number(item.valor_litro).toFixed(2)}</span></p>
-                  <p className="flex justify-between items-center pt-1 border-t border-zinc-800/40">
-                    <span className="text-xs font-bold uppercase text-zinc-500">Valor Total:</span> 
-                    <span className="text-emerald-400 font-black text-base">R$ {Number(item.total).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                  <hr className="border-zinc-800/40 my-1" />
+                  <p className="flex justify-between text-xs md:text-sm">
+                    <span className="text-zinc-500 font-medium">Litros:</span> 
+                    <span className="text-white font-semibold font-mono">{item.litros} L</span>
+                  </p>
+                  <p className="flex justify-between text-xs md:text-sm">
+                    <span className="text-zinc-500 font-medium">Preço/Litro:</span> 
+                    <span className="text-white font-semibold font-mono">R$ {Number(item.valor_litro).toFixed(2)}</span>
+                  </p>
+                  <p className="flex justify-between items-center pt-1.5 border-t border-zinc-800/40 gap-2">
+                    <span className="text-[10px] md:text-xs font-bold uppercase text-zinc-500">Valor Total:</span> 
+                    <span className="text-emerald-400 font-black text-sm md:text-base font-mono">
+                      R$ {Number(item.total).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </span>
                   </p>
                 </div>
               </div>
 
-              {/* AÇÕES */}
-              <div className="flex gap-2 mt-6">
-                <button onClick={() => openEdit(item)} className="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-4 py-2.5 rounded-xl text-xs font-bold transition flex-1">
+              {/* AÇÕES DE EXCLUSÃO/EDIÇÃO */}
+              <div className="flex gap-2 mt-5 md:mt-6">
+                <button onClick={() => openEdit(item)} className="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-4 py-2 md:py-2.5 rounded-xl text-xs font-bold transition flex-1">
                   Editar
                 </button>
-                <button onClick={() => deleteAbastecimento(item.id)} className="bg-red-950/40 hover:bg-red-900/60 text-red-400 border border-red-900/30 px-3 py-2.5 rounded-xl text-xs font-bold transition flex-shrink-0">
+                <button onClick={() => deleteAbastecimento(item.id)} className="bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/10 px-3 py-2 md:py-2.5 rounded-xl text-xs font-bold transition flex-shrink-0">
                   <Trash2 size={14} />
                 </button>
               </div>
@@ -264,13 +281,20 @@ export default function Abastecimentos() {
         </div>
       )}
 
-      {/* SEU MODAL REMODELADO INTEGRADÍSSIMO */}
+      {/* MODAL COMPLETAMENTE RESPONSIVO */}
       {modalOpen && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-3xl w-full max-w-xl space-y-4 my-auto text-zinc-300">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-4 transition-all">
+          <div className="bg-zinc-950 border border-zinc-800/80 p-5 sm:p-8 rounded-2xl sm:rounded-3xl w-full max-w-xl space-y-5 relative text-zinc-300 max-h-[calc(100vh-2rem)] overflow-y-auto">
             
-            <div className="border-b border-zinc-800 pb-3">
-              <h2 className="text-2xl font-black text-white">
+            <button 
+              onClick={() => setModalOpen(false)}
+              className="absolute top-4 right-4 text-zinc-500 hover:text-white transition p-1"
+            >
+              <X size={20} />
+            </button>
+
+            <div className="border-b border-zinc-800/60 pb-3">
+              <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
                 {editId ? '🛠️ Editar Abastecimento' : '⛽ Novo Abastecimento'}
               </h2>
               <p className="text-xs text-zinc-500 mt-1">Insira os dados do cupom fiscal para auditoria de frota.</p>
@@ -279,10 +303,10 @@ export default function Abastecimentos() {
             <div className="space-y-4">
               
               {/* SELEÇÃO DINÂMICA DE VIAGEM */}
-              <div>
-                <label className="text-zinc-400 text-xs font-bold uppercase ml-1">Vincular à Viagem Ativa *</label>
+              <div className="space-y-1.5">
+                <label className="text-zinc-400 text-[11px] sm:text-xs font-bold uppercase tracking-wider">Vincular à Viagem Ativa *</label>
                 <select 
-                  className="w-full p-3 mt-1 rounded-xl bg-zinc-800 text-white border border-zinc-700 focus:outline-none focus:border-blue-500"
+                  className="w-full p-3 rounded-xl bg-zinc-900 text-white border border-zinc-800 focus:outline-none focus:border-blue-500 text-xs sm:text-sm font-medium transition"
                   value={form.viagem_id || ''} 
                   onChange={e => setForm({ ...form, viagem_id: Number(e.target.value) })}
                 >
@@ -299,23 +323,23 @@ export default function Abastecimentos() {
                 </select>
               </div>
 
-              {/* DATA/HORA & HODÔMETRO */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-zinc-400 text-xs font-bold uppercase ml-1">Data e Hora *</label>
+              {/* DATA/HORA & HODÔMETRO (Se molda dinamicamente em 1 coluna no Mobile) */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-zinc-400 text-[11px] sm:text-xs font-bold uppercase tracking-wider">Data e Hora *</label>
                   <input
                     type="datetime-local"
-                    className="w-full p-3 mt-1 rounded-xl bg-zinc-800 text-white border border-zinc-700 focus:outline-none focus:border-blue-500"
+                    className="w-full p-3 rounded-xl bg-zinc-900 text-white border border-zinc-800 focus:outline-none focus:border-blue-500 text-xs sm:text-sm font-mono transition"
                     value={form.created_at}
                     onChange={e => setForm({ ...form, created_at: e.target.value })}
                   />
                 </div>
-                <div>
-                  <label className="text-zinc-400 text-xs font-bold uppercase ml-1">Hodômetro Atual (KM) *</label>
+                <div className="space-y-1.5">
+                  <label className="text-zinc-400 text-[11px] sm:text-xs font-bold uppercase tracking-wider">Hodômetro Atual (KM) *</label>
                   <input
                     type="number"
                     placeholder="Ex: 145200"
-                    className="w-full p-3 mt-1 rounded-xl bg-zinc-800 text-white border border-zinc-700 focus:outline-none focus:border-blue-500"
+                    className="w-full p-3 rounded-xl bg-zinc-900 text-white border border-zinc-800 focus:outline-none focus:border-blue-500 text-xs sm:text-sm font-mono transition"
                     value={form.quilometragem || ''}
                     onChange={e => setForm({ ...form, quilometragem: Number(e.target.value) })}
                   />
@@ -323,10 +347,10 @@ export default function Abastecimentos() {
               </div>
 
               {/* TIPO DE COMBUSTÍVEL */}
-              <div>
-                <label className="text-zinc-400 text-xs font-bold uppercase ml-1">Tipo de Combustível *</label>
+              <div className="space-y-1.5">
+                <label className="text-zinc-400 text-[11px] sm:text-xs font-bold uppercase tracking-wider">Tipo de Combustível *</label>
                 <select 
-                  className="w-full p-3 mt-1 rounded-xl bg-zinc-800 text-white border border-zinc-700 focus:outline-none focus:border-blue-500"
+                  className="w-full p-3 rounded-xl bg-zinc-900 text-white border border-zinc-800 focus:outline-none focus:border-blue-500 text-xs sm:text-sm font-medium transition"
                   value={form.tipo_combustivel}
                   onChange={e => setForm({ ...form, tipo_combustivel: e.target.value })}
                 >
@@ -337,15 +361,15 @@ export default function Abastecimentos() {
                 </select>
               </div>
 
-              {/* QUANTIDADE & VALOR UNITÁRIO */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-zinc-400 text-xs font-bold uppercase ml-1">Qtd. Abastecida (Litros) *</label>
+              {/* QUANTIDADE & VALOR UNITÁRIO (Se molda em 1 coluna no Mobile) */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-zinc-400 text-[11px] sm:text-xs font-bold uppercase tracking-wider">Qtd. Abastecida (Litros) *</label>
                   <input
                     type="number"
                     step="0.01"
                     placeholder="Ex: 50.00"
-                    className="w-full p-3 mt-1 rounded-xl bg-zinc-800 text-white border border-zinc-700 focus:outline-none focus:border-blue-500"
+                    className="w-full p-3 rounded-xl bg-zinc-900 text-white border border-zinc-800 focus:outline-none focus:border-blue-500 text-xs sm:text-sm font-mono transition"
                     value={form.litros || ''}
                     onChange={e => {
                       const litrosVal = Number(e.target.value);
@@ -358,13 +382,13 @@ export default function Abastecimentos() {
                     }}
                   />
                 </div>
-                <div>
-                  <label className="text-zinc-400 text-xs font-bold uppercase ml-1">Valor Unitário (por Litro) *</label>
+                <div className="space-y-1.5">
+                  <label className="text-zinc-400 text-[11px] sm:text-xs font-bold uppercase tracking-wider">Valor Unitário (por Litro) *</label>
                   <input
                     type="number"
                     step="0.001"
                     placeholder="Ex: 5.89"
-                    className="w-full p-3 mt-1 rounded-xl bg-zinc-800 text-white border border-zinc-700 focus:outline-none focus:border-blue-500"
+                    className="w-full p-3 rounded-xl bg-zinc-900 text-white border border-zinc-800 focus:outline-none focus:border-blue-500 text-xs sm:text-sm font-mono transition"
                     value={form.valor_litro || ''}
                     onChange={e => {
                       const precoUnit = Number(e.target.value);
@@ -379,26 +403,26 @@ export default function Abastecimentos() {
                 </div>
               </div>
 
-              {/* VALOR TOTAL CALCULADO */}
-              <div className="bg-zinc-950/50 border border-zinc-800 rounded-2xl p-4 flex items-center justify-between">
+              {/* VALOR TOTAL CALCULADO FLUIDO */}
+              <div className="bg-zinc-950/50 border border-zinc-800 rounded-xl md:rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div>
-                  <p className="text-xs text-zinc-500 font-bold uppercase">Custo Total da Operação</p>
-                  <p className="text-xs text-zinc-400 mt-0.5">(Multiplicação automática de Litros × Valor por litro)</p>
+                  <p className="text-xs text-zinc-500 font-bold uppercase tracking-wider">Custo Total da Operação</p>
+                  <p className="text-[10px] text-zinc-500 mt-0.5">(Multiplicação automática de Litros × Preço)</p>
                 </div>
-                <div className="text-right">
+                <div className="text-left sm:text-right">
                   <span className="text-xs text-emerald-500 font-bold mr-1">R$</span>
-                  <span className="text-2xl font-black text-emerald-400">
+                  <span className="text-xl sm:text-2xl font-black text-emerald-400 font-mono">
                     {form.total ? Number(form.total).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '0,00'}
                   </span>
                 </div>
               </div>
 
               {/* POSTO DE COMBUSTÍVEL */}
-              <div>
-                <label className="text-zinc-400 text-xs font-bold uppercase ml-1">Posto de Combustível (Nome/Bandeira) *</label>
+              <div className="space-y-1.5">
+                <label className="text-zinc-400 text-[11px] sm:text-xs font-bold uppercase tracking-wider">Posto de Combustível *</label>
                 <input
                   type="text"
-                  className="w-full p-3 mt-1 rounded-xl bg-zinc-800 text-white border border-zinc-700 focus:outline-none focus:border-blue-500"
+                  className="w-full p-3 rounded-xl bg-zinc-900 text-white border border-zinc-800 focus:outline-none focus:border-blue-500 text-xs sm:text-sm font-medium transition"
                   placeholder="Ex: Posto Ipiranga - Av. Paulista, 1500"
                   value={form.local_abastecimento || ''}
                   onChange={e => setForm({ ...form, local_abastecimento: e.target.value })}
@@ -407,19 +431,19 @@ export default function Abastecimentos() {
 
             </div>
 
-            {/* BOTÕES DE AÇÃO */}
-            <div className="flex justify-end gap-2 pt-4 border-t border-zinc-800">
+            {/* BOTÕES DE AÇÃO DO FORMULÁRIO */}
+            <div className="flex justify-end gap-3 pt-4 border-t border-zinc-900/60">
               <button
                 type="button"
                 onClick={() => setModalOpen(false)}
-                className="px-5 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl font-medium transition"
+                className="px-4 py-2.5 bg-zinc-900 hover:bg-zinc-850 text-zinc-400 hover:text-white rounded-xl font-medium transition text-xs sm:text-sm"
               >
                 Cancelar
               </button>
               <button
                 type="button"
                 onClick={saveAbastecimento}
-                className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold transition"
+                className="px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold transition text-xs sm:text-sm shadow-lg shadow-blue-600/10"
               >
                 Confirmar e Salvar
               </button>
