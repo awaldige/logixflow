@@ -6,10 +6,10 @@ interface DashboardProps {
   totalVeiculos: number
   totalMotoristas: number
   totalViagens: number
-  totalManutencoes: number   // Mantém a contagem de registros se usar embaixo
-  totalAbastecimentos: number // Mantém a contagem de registros se usar embaixo
-  custoTotalManutencao: number   // ✨ NOVA PROP: Valor real somado em R$
-  custoTotalCombustivel: number  // ✨ NOVA PROP: Valor real somado em R$
+  totalManutencoes: number
+  totalAbastecimentos: number
+  custoTotalManutencao: number   // Recebe o R$ real calculado da tabela manutencoes
+  custoTotalCombustivel: number  // Recebe o R$ real calculado da tabela abastecimentos
 }
 
 export default function Dashboard({
@@ -22,23 +22,22 @@ export default function Dashboard({
   custoTotalCombustivel = 0
 }: DashboardProps) {
 
-  // Normalização e conversão segura dos dados vindos das props
   const veiculos = Number(totalVeiculos || 0)
   const manutencoes = Number(totalManutencoes || 0)
   const abastecimentos = Number(totalAbastecimentos || 0)
   const viagens = Number(totalViagens || 0)
 
-  // ✨ AGORA UTILIZA OS VALORES REAIS DO BANCO DE DADOS:
+  // 🔍 Usando os valores financeiros reais vindos do Supabase
   const custoManutencao = Number(custoTotalManutencao || 0)
   const custoCombustivel = Number(custoTotalCombustivel || 0)
   const custoTotal = custoManutencao + custoCombustivel
 
+  // Custo médio por veículo da frota
   const mediaCustoPorVeiculo = veiculos > 0 ? custoTotal / veiculos : 0
 
   return (
     <div className="space-y-8">
 
-      {/* HEADER EXECUTIVO */}
       <div>
         <h2 className="text-3xl font-black text-white">
           Visão Executiva
@@ -48,7 +47,7 @@ export default function Dashboard({
         </p>
       </div>
 
-      {/* KPIs PRINCIPAIS */}
+      {/* KPIs FINANCEIROS REAIS */}
       <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
 
         <Card
@@ -74,7 +73,7 @@ export default function Dashboard({
 
         <Card
           titulo="Custo por Veículo"
-          valor={mediaCustoPorVeiculo} // Removido Math.round para deixar o Card formatar os centavos
+          valor={mediaCustoPorVeiculo}
           cor="text-blue-400"
           descricao="Média operacional"
         />
@@ -121,7 +120,6 @@ export default function Dashboard({
 
       </div>
 
-      {/* PAINEL EXECUTIVO FINAL */}
       <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 hover:border-zinc-700 transition">
         <h3 className="text-white font-bold text-lg">
           Status da Operação
