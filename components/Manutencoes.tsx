@@ -89,12 +89,10 @@ export default function Manutencoes() {
     }
   }, [fetchData])
 
-  // Botão rápido para conclusão direta no Card mudando o veículo para 'ativo'
   async function concluirManutencao(id: number, veiculoId: number) {
     if (!veiculoId) return alert('ID do veículo inválido para conclusão.');
 
     try {
-      // 1. Atualiza o status da manutenção
       const { error: manutencaoError } = await supabase
         .from('manutencoes')
         .update({ status: 'concluida' })
@@ -102,7 +100,6 @@ export default function Manutencoes() {
 
       if (manutencaoError) throw manutencaoError
 
-      // 2. Libera o veículo de volta para a frota como 'ativo'
       const { error: veiculoError } = await supabase
         .from('veiculos')
         .update({ status: 'ativo' })
@@ -165,7 +162,6 @@ export default function Manutencoes() {
 
       if (error) throw error
 
-      // ✨ SINCRO DE STATUS COM A FROTA:
       const novoStatusVeiculo = form.status === 'concluida' ? 'ativo' : 'manutencao'
       
       const { error: errorVeiculo } = await supabase
@@ -212,29 +208,40 @@ export default function Manutencoes() {
   }
 
   return (
-    <div className="space-y-6 p-6 max-w-7xl mx-auto text-white">
-      {/* HEADER */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-3xl font-black text-white tracking-tight">Manutenções</h2>
-          <p className="text-zinc-500 mt-1">Histórico e controle de reparos da frota.</p>
+    <div className="space-y-6 p-4 md:p-6 max-w-7xl mx-auto text-white">
+      
+      {/* HEADER RESPONSIVO */}
+      <div className="flex items-center justify-between gap-4">
+        <div className="min-w-0">
+          <h2 className="text-2xl md:text-3xl font-black text-white tracking-tight truncate">Manutenções</h2>
+          <p className="text-zinc-500 text-xs md:text-sm mt-1 truncate">Histórico e controle de reparos.</p>
         </div>
-        <button onClick={openCreate} className="bg-blue-600 hover:bg-blue-500 text-white transition-all px-5 py-3 rounded-2xl font-bold flex items-center gap-2 shadow-lg shadow-blue-600/10">
-          <Plus size={18} /> Nova Manutenção
+        <button 
+          onClick={openCreate} 
+          className="bg-blue-600 hover:bg-blue-500 text-white transition-all px-4 py-2.5 md:px-5 md:py-3 rounded-xl md:rounded-2xl font-bold flex items-center gap-2 shadow-lg shadow-blue-600/10 flex-shrink-0 text-xs md:text-sm"
+        >
+          <Plus size={16} /> 
+          <span className="hidden sm:inline">Nova Manutenção</span>
         </button>
       </div>
 
-      {loading && <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-8 text-zinc-400 animate-pulse">Carregando manutenções...</div>}
+      {loading && (
+        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl md:rounded-3xl p-8 text-zinc-400 animate-pulse">
+          Carregando manutenções...
+        </div>
+      )}
 
-      {/* GRID */}
+      {/* GRID RESPONSIVO: 1 coluna no mobile, 2 no tablet, 3 no desktop */}
       {!loading && (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 md:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
           {manutencoes.map((m) => (
-            <div key={m.id} className="bg-zinc-900 border border-zinc-800/80 rounded-3xl p-6 flex flex-col justify-between hover:border-zinc-700 transition duration-300 shadow-xl group">
+            <div key={m.id} className="bg-zinc-900 border border-zinc-800/80 rounded-2xl md:rounded-3xl p-5 md:p-6 flex flex-col justify-between hover:border-zinc-700 transition duration-300 shadow-xl min-w-0">
               <div>
-                <div className="flex items-center justify-between border-b border-zinc-800/60 pb-3 mb-4">
-                  <span className="text-white font-bold text-sm truncate max-w-[170px]">{getVeiculoTexto(m)}</span>
-                  <span className={`px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider ${
+                <div className="flex items-center justify-between border-b border-zinc-800/60 pb-3 mb-4 gap-2">
+                  <span className="text-white font-bold text-xs md:text-sm truncate flex-1" title={getVeiculoTexto(m)}>
+                    {getVeiculoTexto(m)}
+                  </span>
+                  <span className={`px-2.5 py-0.5 md:px-3 md:py-1 rounded-lg md:rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-wider flex-shrink-0 ${
                     m.status === 'concluida' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
                     m.status === 'pendente' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' :
                     'bg-red-500/10 text-red-400 border border-red-500/20'
@@ -244,37 +251,37 @@ export default function Manutencoes() {
                 </div>
 
                 <div className="space-y-3 mb-4">
-                  <div className="flex items-start gap-2">
+                  <div className="flex items-start gap-2 min-w-0">
                     <Wrench size={16} className="text-blue-500 mt-1 flex-shrink-0" />
-                    <div>
-                      <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">Descrição</p>
-                      <p className="text-white font-bold text-base leading-snug">{m.descricao}</p>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[9px] md:text-[10px] text-zinc-500 font-bold uppercase tracking-wider">Descrição</p>
+                      <p className="text-white font-bold text-sm md:text-base leading-snug break-words">{m.descricao}</p>
                     </div>
                   </div>
                 </div>
 
-                <div className="bg-zinc-950/40 rounded-2xl p-4 space-y-2 text-sm text-zinc-400 border border-zinc-800/40">
-                  <p className="flex justify-between">
+                <div className="bg-zinc-950/40 rounded-xl md:rounded-2xl p-3 md:p-4 space-y-2 text-xs md:text-sm text-zinc-400 border border-zinc-800/40">
+                  <p className="flex justify-between gap-2">
                     <span className="flex items-center gap-1.5 text-zinc-500 text-xs font-medium"><Calendar size={14} /> Data</span> 
                     <span className="text-white font-semibold font-mono text-xs">{formatarData(m.data_manutencao)}</span>
                   </p>
-                  <p className="flex justify-between">
+                  <p className="flex justify-between gap-2">
                     <span className="flex items-center gap-1.5 text-zinc-500 text-xs font-medium"><DollarSign size={14} /> Custo</span> 
                     <span className="text-emerald-400 font-bold font-mono text-xs">R$ {Number(m.custo).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                   </p>
-                  <p className="flex justify-between">
-                    <span className="text-zinc-500 text-xs font-medium">Oficina</span> 
-                    <span className="text-white font-semibold text-xs truncate max-w-[160px]">{m.oficina}</span>
+                  <p className="flex justify-between gap-2 min-w-0">
+                    <span className="text-zinc-500 text-xs font-medium flex-shrink-0">Oficina</span> 
+                    <span className="text-white font-semibold text-xs truncate text-right flex-1" title={m.oficina}>{m.oficina}</span>
                   </p>
                 </div>
               </div>
 
-              {/* LISTA DE AÇÕES COM CONCLUÍDA */}
-              <div className="space-y-2 mt-6">
+              {/* LISTA DE AÇÕES OPERACIONAIS */}
+              <div className="space-y-2 mt-5 md:mt-6">
                 {m.status !== 'concluida' && (
                   <button
                     onClick={() => concluirManutencao(m.id, m.veiculo_id)}
-                    className="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-2.5 rounded-xl text-xs font-black transition flex items-center justify-center gap-2 shadow-lg shadow-emerald-900/10"
+                    className="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-2 md:py-2.5 rounded-xl text-xs font-black transition flex items-center justify-center gap-2 shadow-lg shadow-emerald-900/10"
                   >
                     <CheckCircle size={14} />
                     Concluir Manutenção
@@ -295,30 +302,30 @@ export default function Manutencoes() {
         </div>
       )}
 
-      {/* MODAL */}
+      {/* MODAL RESPONSIVO COM ROLAGEM INTERNA INTELIGENTE */}
       {modalOpen && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 transition-all">
-          <div className="bg-zinc-950 p-6 sm:p-8 rounded-3xl w-full max-w-xl space-y-6 border border-zinc-800 shadow-2xl relative text-zinc-300">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-4 transition-all">
+          <div className="bg-zinc-950 p-5 sm:p-8 rounded-2xl sm:rounded-3xl w-full max-w-xl space-y-5 sm:space-y-6 border border-zinc-800 shadow-2xl relative text-zinc-300 max-h-[calc(100vh-2rem)] overflow-y-auto">
             
             <button 
               onClick={() => { setModalOpen(false); resetForm(); }}
-              className="absolute top-4 right-4 text-zinc-500 hover:text-white transition"
+              className="absolute top-4 right-4 text-zinc-500 hover:text-white transition p-1"
             >
               <X size={20} />
             </button>
 
             <div>
-              <h2 className="text-2xl font-black text-white tracking-tight">
+              <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
                 {editId ? 'Editar Manutenção' : 'Nova Manutenção'}
               </h2>
-              <p className="text-zinc-500 text-xs mt-1">Insira os dados do chamado técnico para controle financeiro e operacional.</p>
+              <p className="text-zinc-500 text-xs mt-1">Insira os dados do chamado técnico para controle operacional.</p>
             </div>
 
             <div className="space-y-4">
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Veículo *</label>
                 <select 
-                  className="w-full p-3 rounded-xl bg-zinc-900 text-white border border-zinc-800 focus:outline-none focus:border-blue-500 transition text-sm font-medium" 
+                  className="w-full p-3 rounded-xl bg-zinc-900 text-white border border-zinc-800 focus:outline-none focus:border-blue-500 transition text-xs sm:text-sm font-medium" 
                   value={form.veiculo_id} 
                   onChange={e => setForm({ ...form, veiculo_id: Number(e.target.value) })}
                 >
@@ -332,7 +339,7 @@ export default function Manutencoes() {
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Descrição do Serviço *</label>
                 <input
-                  className="w-full p-3 rounded-xl bg-zinc-900 text-white border border-zinc-800 focus:outline-none focus:border-blue-500 transition text-sm font-medium"
+                  className="w-full p-3 rounded-xl bg-zinc-900 text-white border border-zinc-800 focus:outline-none focus:border-blue-500 transition text-xs sm:text-sm font-medium"
                   placeholder="Ex: Troca de pastilhas de freio e óleo"
                   value={form.descricao}
                   onChange={e => setForm({ ...form, descricao: e.target.value })}
@@ -342,19 +349,20 @@ export default function Manutencoes() {
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Oficina / Fornecedor</label>
                 <input
-                  className="w-full p-3 rounded-xl bg-zinc-900 text-white border border-zinc-800 focus:outline-none focus:border-blue-500 transition text-sm font-medium"
+                  className="w-full p-3 rounded-xl bg-zinc-900 text-white border border-zinc-800 focus:outline-none focus:border-blue-500 transition text-xs sm:text-sm font-medium"
                   placeholder="Ex: Auto Mecânica Diesel Central"
                   value={form.oficina}
                   onChange={e => setForm({ ...form, oficina: e.target.value })}
                 />
               </div>
 
+              {/* GRID DUPLO: Se molda em 1 coluna no mobile e 2 a partir do tamanho 'sm' */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Data da Manutenção *</label>
                   <input
                     type="date"
-                    className="w-full p-3 rounded-xl bg-zinc-900 text-white border border-zinc-800 focus:outline-none focus:border-blue-500 transition text-sm font-mono"
+                    className="w-full p-3 rounded-xl bg-zinc-900 text-white border border-zinc-800 focus:outline-none focus:border-blue-500 transition text-xs sm:text-sm font-mono"
                     value={form.data_manutencao}
                     onChange={e => setForm({ ...form, data_manutencao: e.target.value })}
                   />
@@ -364,7 +372,7 @@ export default function Manutencoes() {
                   <input
                     type="number"
                     step="0.01"
-                    className="w-full p-3 rounded-xl bg-zinc-900 text-white border border-zinc-800 focus:outline-none focus:border-blue-500 transition text-sm font-mono"
+                    className="w-full p-3 rounded-xl bg-zinc-900 text-white border border-zinc-800 focus:outline-none focus:border-blue-500 transition text-xs sm:text-sm font-mono"
                     placeholder="0.00"
                     value={form.custo}
                     onChange={e => setForm({ ...form, custo: e.target.value })}
@@ -375,7 +383,7 @@ export default function Manutencoes() {
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Status Operacional</label>
                 <select
-                  className="w-full p-3 rounded-xl bg-zinc-900 text-white border border-zinc-800 focus:outline-none focus:border-blue-500 transition text-sm font-medium"
+                  className="w-full p-3 rounded-xl bg-zinc-900 text-white border border-zinc-800 focus:outline-none focus:border-blue-500 transition text-xs sm:text-sm font-medium"
                   value={form.status}
                   onChange={e => setForm({ ...form, status: e.target.value })}
                 >
@@ -386,16 +394,16 @@ export default function Manutencoes() {
               </div>
             </div>
 
-            <div className="flex justify-end gap-3 pt-4 border-t border-zinc-900">
+            <div className="flex justify-end gap-3 pt-4 border-t border-zinc-900/60">
               <button
                 onClick={() => { setModalOpen(false); resetForm(); }}
-                className="px-5 py-2.5 bg-zinc-900 hover:bg-zinc-850 text-zinc-400 hover:text-white rounded-xl font-medium transition text-sm"
+                className="px-4 py-2.5 sm:px-5 bg-zinc-900 hover:bg-zinc-850 text-zinc-400 hover:text-white rounded-xl font-medium transition text-xs sm:text-sm"
               >
                 Cancelar
               </button>
               <button
                 onClick={saveManutencao}
-                className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold transition text-sm shadow-lg shadow-blue-600/10"
+                className="px-4 py-2.5 sm:px-5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold transition text-xs sm:text-sm shadow-lg shadow-blue-600/10"
               >
                 Salvar
               </button>
