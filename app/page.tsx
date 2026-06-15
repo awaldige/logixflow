@@ -20,7 +20,7 @@ export default function Home() {
   const [totalManutencoes, setTotalManutencoes] = useState(0)
   const [totalAbastecimentos, setTotalAbastecimentos] = useState(0)
 
-  // ✨ NOVOS ESTADOS: Armazenam os custos reais somados em R$
+  // Estados dos custos reais somados em R$
   const [custoTotalManutencao, setCustoTotalManutencao] = useState(0)
   const [custoTotalCombustivel, setCustoTotalCombustivel] = useState(0)
 
@@ -50,15 +50,15 @@ export default function Home() {
           .from('viagens')
           .select('*', { count: 'exact', head: true }),
 
-        // ✨ BUSCA DETALHADA: Trazemos os valores da coluna 'custo' para somar em dinheiro
+        // Trazendo os valores da coluna 'custo'
         supabase
           .from('manutencoes')
           .select('custo'),
 
-        // ✨ BUSCA DETALHADA: Trazemos os valores da coluna de preço (ajuste o nome se necessário)
+        // 🔍 CORRIGIDO: Trazendo os valores da sua coluna real chamada 'total'
         supabase
           .from('abastecimentos')
-          .select('valor_total') 
+          .select('total') 
       ])
 
       // 1. Definição das contagens operacionais normais
@@ -68,21 +68,24 @@ export default function Home() {
       setTotalManutencoes(resManutencoes.data?.length || 0)
       setTotalAbastecimentos(resAbastecimentos.data?.length || 0)
 
-      // 2. ✨ CÁLCULO DE SOMA EM DINHEIRO REAL:
-      const somaManutencao = resManutencoes.data?.reduce(
-        (acc, item) => acc + Number(item.custo || 0), 0
-      ) || 0
+      // 2. CÁLCULO DE SOMA DA MANUTENÇÃO (custo)
+      const somaManutencao = resManutencoes.data?.reduce((acc, item) => {
+        const valor = Number(item.custo)
+        return acc + (isNaN(valor) ? 0 : valor)
+      }, 0) || 0
 
-      const somaCombustivel = resAbastecimentos.data?.reduce(
-        (acc, item) => acc + Number(item.valor_total || 0), 0
-      ) || 0
+      // 3. 🔍 CORRIGIDO: CÁLCULO DE SOMA DO COMBUSTÍVEL (Usando item.total)
+      const somaCombustivel = resAbastecimentos.data?.reduce((acc, item) => {
+        const valor = Number(item.total) 
+        return acc + (isNaN(valor) ? 0 : valor)
+      }, 0) || 0
 
       setCustoTotalManutencao(somaManutencao)
       setCustoTotalCombustivel(somaCombustivel)
 
     } catch (error) {
       console.error('Erro ao carregar dashboard:', error)
-    } final {
+    } finally {
       isFetchingRef.current = false
     }
   }
@@ -97,9 +100,7 @@ export default function Home() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'viagens' }, carregarDashboard)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'manutencoes' }, carregarDashboard)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'abastecimentos' }, carregarDashboard)
-      .subscribe((status) => {
-        console.log('Realtime Dashboard:', status)
-      })
+      .subscribe()
 
     const interval = setInterval(() => {
       carregarDashboard()
@@ -125,8 +126,8 @@ export default function Home() {
               totalViagens={totalViagens}
               totalManutencoes={totalManutencoes}
               totalAbastecimentos={totalAbastecimentos}
-              custoTotalManutencao={custoTotalManutencao}   // ✨ Enviando R$ real somado
-              custoTotalCombustivel={custoTotalCombustivel} // ✨ Enviando R$ real somado
+              custoTotalManutencao={custoTotalManutencao}
+              custoTotalCombustivel={custoTotalCombustivel}
             />
 
             <div className="mt-8 bg-zinc-900 border border-zinc-800 rounded-3xl p-10">
