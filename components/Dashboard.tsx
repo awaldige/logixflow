@@ -1,11 +1,15 @@
+'use client'
+
 import Card from './Card'
 
 interface DashboardProps {
   totalVeiculos: number
   totalMotoristas: number
   totalViagens: number
-  totalManutencoes: number
-  totalAbastecimentos: number
+  totalManutencoes: number   // Mantém a contagem de registros se usar embaixo
+  totalAbastecimentos: number // Mantém a contagem de registros se usar embaixo
+  custoTotalManutencao: number   // ✨ NOVA PROP: Valor real somado em R$
+  custoTotalCombustivel: number  // ✨ NOVA PROP: Valor real somado em R$
 }
 
 export default function Dashboard({
@@ -13,18 +17,20 @@ export default function Dashboard({
   totalMotoristas,
   totalViagens,
   totalManutencoes,
-  totalAbastecimentos
+  totalAbastecimentos,
+  custoTotalManutencao = 0,
+  custoTotalCombustivel = 0
 }: DashboardProps) {
 
   // Normalização e conversão segura dos dados vindos das props
   const veiculos = Number(totalVeiculos || 0)
   const manutencoes = Number(totalManutencoes || 0)
   const abastecimentos = Number(totalAbastecimentos || 0)
-  const viagens = Number(totalViagens || 0) // <--- Adicionado para garantir o valor numérico
+  const viagens = Number(totalViagens || 0)
 
-  // Cálculos financeiros simulados
-  const custoManutencao = manutencoes * 350
-  const custoCombustivel = abastecimentos * 250
+  // ✨ AGORA UTILIZA OS VALORES REAIS DO BANCO DE DADOS:
+  const custoManutencao = Number(custoTotalManutencao || 0)
+  const custoCombustivel = Number(custoTotalCombustivel || 0)
   const custoTotal = custoManutencao + custoCombustivel
 
   const mediaCustoPorVeiculo = veiculos > 0 ? custoTotal / veiculos : 0
@@ -68,7 +74,7 @@ export default function Dashboard({
 
         <Card
           titulo="Custo por Veículo"
-          valor={Math.round(mediaCustoPorVeiculo)}
+          valor={mediaCustoPorVeiculo} // Removido Math.round para deixar o Card formatar os centavos
           cor="text-blue-400"
           descricao="Média operacional"
         />
@@ -94,7 +100,7 @@ export default function Dashboard({
 
         <Card
           titulo="Viagens"
-          valor={viagens} // <--- Passando a variável tratada com segurança
+          valor={viagens}
           cor="text-blue-400"
           descricao="Operações registradas"
         />
