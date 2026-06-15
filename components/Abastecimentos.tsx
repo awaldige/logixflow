@@ -47,7 +47,7 @@ export default function Abastecimentos() {
 
   const isFetchingRef = useRef(false)
 
-  // 2. BUSCA DE ABASTECIMENTOS COM RELACIONAMENTO
+  // 2. BUSCA DE ABASTECIMENTOS COM RELACIONAMENTO (CORRIGIDO: origem)
   const fetchData = useCallback(async () => {
     if (isFetchingRef.current) return
     isFetchingRef.current = true
@@ -58,7 +58,7 @@ export default function Abastecimentos() {
         .select(`
           id, viagem_id, litros, valor_litro, total, local_abastecimento, created_at,
           viagens (
-            id, origen, destino,
+            id, origem, destino,
             veiculos ( placa, modelo ),
             motoristas ( nome )
           )
@@ -213,7 +213,7 @@ export default function Abastecimentos() {
         </div>
       )}
 
-      {/* GRID DE CARDS RESPONSIVO (1 Coluna no Mobile, 2 no Tablet, 3 no Computador) */}
+      {/* GRID DE CARDS RESPONSIVO */}
       {!loading && (
         <div className="grid gap-4 md:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
           {abastecimentos.map((item) => (
@@ -281,9 +281,9 @@ export default function Abastecimentos() {
         </div>
       )}
 
-      {/* MODAL COMPLETAMENTE RESPONSIVO */}
+      {/* MODAL RESPONSIVO */}
       {modalOpen && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-4 transition-all">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-4">
           <div className="bg-zinc-950 border border-zinc-800/80 p-5 sm:p-8 rounded-2xl sm:rounded-3xl w-full max-w-xl space-y-5 relative text-zinc-300 max-h-[calc(100vh-2rem)] overflow-y-auto">
             
             <button 
@@ -323,7 +323,7 @@ export default function Abastecimentos() {
                 </select>
               </div>
 
-              {/* DATA/HORA & HODÔMETRO (Se molda dinamicamente em 1 coluna no Mobile) */}
+              {/* DATA/HORA & HODÔMETRO */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-zinc-400 text-[11px] sm:text-xs font-bold uppercase tracking-wider">Data e Hora *</label>
@@ -361,7 +361,7 @@ export default function Abastecimentos() {
                 </select>
               </div>
 
-              {/* QUANTIDADE & VALOR UNITÁRIO (Se molda em 1 coluna no Mobile) */}
+              {/* QUANTIDADE & VALOR UNITÁRIO */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-zinc-400 text-[11px] sm:text-xs font-bold uppercase tracking-wider">Qtd. Abastecida (Litros) *</label>
@@ -403,8 +403,8 @@ export default function Abastecimentos() {
                 </div>
               </div>
 
-              {/* VALOR TOTAL CALCULADO FLUIDO */}
-              <div className="bg-zinc-950/50 border border-zinc-800 rounded-xl md:rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              {/* VALOR TOTAL CALCULADO */}
+              <div className="bg-zinc-950/50 border border-zinc-800 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div>
                   <p className="text-xs text-zinc-500 font-bold uppercase tracking-wider">Custo Total da Operação</p>
                   <p className="text-[10px] text-zinc-500 mt-0.5">(Multiplicação automática de Litros × Preço)</p>
