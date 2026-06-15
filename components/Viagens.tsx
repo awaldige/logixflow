@@ -17,7 +17,7 @@ interface Viagem {
   km_inicial: number
   km_final: number | null
   motoristas: { nome: string } | { nome: string }[] | null
-  veiculos: { placa: string; modelo: string } | { placa: string; modelo: string }[] | null
+  veiculos: { placa: string; modelo: string; status?: string } | { placa: string; modelo: string; status?: string }[] | null
 }
 
 interface Motorista {
@@ -29,6 +29,7 @@ interface Veiculo {
   id: number
   placa: string
   modelo: string
+  status?: string // Campo adicionado para prever o status vindo da tabela de veículos (ex: 'disponível', 'em manutenção')
 }
 
 const INITIAL_FORM_STATE = {
@@ -65,7 +66,7 @@ export default function Viagens() {
         .select(`
           id, origem, destino, veiculo_id, motorista_id,
           data_saida, data_retorno, status, km_inicial, km_final,
-          motoristas ( nome ), veiculos ( placa, modelo )
+          motoristas ( nome ), veiculos ( placa, modelo, status )
         `)
         .order("data_saida", { ascending: false })
 
@@ -83,9 +84,10 @@ export default function Viagens() {
   useEffect(() => {
     async function loadAuxiliaryData() {
       try {
+        // Busca também o campo 'status' da tabela de veículos para validar manutenções fora de viagens
         const [motoristasRes, veiculosRes] = await Promise.all([
           supabase.from('motoristas').select('id, nome'),
-          supabase.from('veiculos').select('id, placa, modelo')
+          supabase.from('veiculos').select('id, placa, modelo, status')
         ])
         setMotoristas(motoristasRes.data || [])
         setVeiculos(veiculosRes.data || [])
@@ -110,7 +112,7 @@ export default function Viagens() {
     .filter(v => v.status === 'em andamento' && v.id !== editId)
     .map(v => v.motorista_id)
 
-  const veiculosOcupadosIds = viajes
+  const veiculosOcupadosIds = viagens
     .filter(v => v.status === 'em andamento' && v.id !== editId)
     .map(v => v.veiculo_id)
 
@@ -398,16 +400,26 @@ export default function Viagens() {
                 </select>
               </div>
 
-              {/* VEÍCULO (Com verificação de disponibilidade) */}
+              {/* VEÍCULO (Com verificação de disponibilidade em viagem E em manutenção) */}
               <div className="space-y-1.5">
                 <label className="text-[11px] sm:text-xs font-bold text-zinc-400 uppercase tracking-wider">Veículo</label>
                 <select className="w-full p-3 rounded-xl bg-zinc-900 text-white border border-zinc-800 focus:outline-none focus:border-blue-500 transition text-xs sm:text-sm font-medium" value={form.veiculo_id} onChange={e => setForm({ ...form, veiculo_id: Number(e.target.value) })}>
                   <option value={0}>Selecione um veículo</option>
                   {veiculos.map((v) => {
-                    const estaOcupado = veiculosOcupadosIds.includes(v.id);
+                    const emViagem = veiculosOcupadosIds.includes(v.id);
+                    const emManutencao = v.status?.toLowerCase() === 'em manutenção';
+                    
+                    // O veículo fica desabilitado se estiver em viagem ativa OU se estiver marcado em manutenção
+                    const estaIndisponivel = emViagem || emManutencao;
+
+                    // Define o texto informativo de indisponibilidade
+                    let motivoIndisponibilidade = '';
+                    if (emViagem) motivoIndisponibilidade = '(Ocupado em Viagem)';
+                    else if (emManutencao) motivoIndisponibilidade = '(Em Manutenção)';
+
                     return (
-                      <option key={v.id} value={v.id} disabled={estaOcupado}>
-                        🚛 {v.placa} - {v.modelo} {estaOcupado ? '(Ocupado em Viagem)' : ''}
+                      <option key={v.id} value={v.id} disabled={estaIndisponivel}>
+                        Subtly 🚛 {v.placa} - {v.modelo} {motivoIndisponibilidade}
                       </option>
                     )
                   })}
