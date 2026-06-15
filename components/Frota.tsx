@@ -136,21 +136,31 @@ export default function Frota() {
     fetchData()
   }
 
-  // Função auxiliar para pintar as badges de status corretamente
+  // MAPEAMENTO INTELIGENTE DE CORES E TEXTOS DE STATUS
   const getStatusStyle = (status: string) => {
-    switch (status?.toLowerCase()) {
-      case 'ativo':
-        return 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-      case 'manutencao':
-      case 'manutenção':
-        return 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20'
-      default:
-        return 'bg-zinc-500/10 text-zinc-400 border border-zinc-500/20'
+    const s = status?.toLowerCase() || ''
+    if (s === 'ativo') {
+      return 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
     }
+    if (s === 'manutencao' || s === 'manutenção') {
+      return 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+    }
+    if (s === 'ocupado' || s === 'em viagem') {
+      return 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+    }
+    return 'bg-zinc-500/10 text-zinc-400 border border-zinc-500/20'
+  }
+
+  const formatarStatusTexto = (status: string) => {
+    const s = status?.toLowerCase() || ''
+    if (s === 'manutencao' || s === 'manutenção') return 'Em Manutenção'
+    if (s === 'ativo') return 'Disponível'
+    if (s === 'ocupado') return 'Em Viagem'
+    return status
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 text-white p-6 max-w-7xl mx-auto">
       {/* HEADER */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -167,7 +177,6 @@ export default function Frota() {
         </button>
       </div>
 
-      {/* LOADING STATE */}
       {loading && (
         <div className="bg-zinc-900/50 border border-zinc-800 rounded-3xl p-12 text-center text-zinc-500 animate-pulse">
           Buscando registros na base de dados...
@@ -185,15 +194,15 @@ export default function Frota() {
               <div>
                 {/* Topo do Card */}
                 <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <span className="text-xs uppercase font-semibold tracking-widest text-zinc-500">{veiculo.marca}</span>
-                    <h3 className="text-2xl font-black text-white tracking-tight mt-0.5 group-hover:text-blue-400 transition-colors">
+                  <div className="truncate flex-1">
+                    <span className="text-xs uppercase font-semibold tracking-widest text-zinc-500">{veiculo.marca || 'Sem Marca'}</span>
+                    <h3 className="text-2xl font-black text-white tracking-tight mt-0.5 group-hover:text-blue-400 transition-colors uppercase">
                       {veiculo.placa}
                     </h3>
-                    <p className="text-zinc-400 text-sm mt-1 font-medium">{veiculo.modelo}</p>
+                    <p className="text-zinc-400 text-sm mt-1 font-medium truncate">{veiculo.modelo}</p>
                   </div>
-                  <span className={`px-3 py-1 rounded-xl text-xs font-bold uppercase tracking-wider ${getStatusStyle(veiculo.status)}`}>
-                    {veiculo.status}
+                  <span className={`px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider whitespace-nowrap ${getStatusStyle(veiculo.status)}`}>
+                    {formatarStatusTexto(veiculo.status)}
                   </span>
                 </div>
 
@@ -203,30 +212,30 @@ export default function Frota() {
                 {/* Info Técnica Básica */}
                 <div className="grid grid-cols-2 gap-4 text-sm text-zinc-400">
                   <div className="flex items-center gap-2 bg-zinc-950/40 p-3 rounded-xl border border-zinc-800/40">
-                    <Milestone size={16} className="text-blue-500" />
+                    <Milestone size={16} className="text-blue-500 flex-shrink-0" />
                     <div>
                       <p className="text-[10px] uppercase text-zinc-500 font-bold tracking-wider">Quilometragem</p>
-                      <p className="text-white font-bold mt-0.5">{veiculo.km_atual.toLocaleString('pt-BR')} KM</p>
+                      <p className="text-white font-bold mt-0.5 font-mono">{(veiculo.km_atual || 0).toLocaleString('pt-BR')} KM</p>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-2 bg-zinc-950/40 p-3 rounded-xl border border-zinc-800/40">
-                    <Calendar size={16} className="text-purple-500" />
+                    <Calendar size={16} className="text-purple-500 flex-shrink-0" />
                     <div>
                       <p className="text-[10px] uppercase text-zinc-500 font-bold tracking-wider">Ano Fab.</p>
-                      <p className="text-white font-bold mt-0.5">{veiculo.ano}</p>
+                      <p className="text-white font-bold mt-0.5 font-mono">{veiculo.ano}</p>
                     </div>
                   </div>
                 </div>
 
                 {veiculo.tipo && (
-                  <p className="text-xs text-zinc-500 mt-4 flex items-center gap-1.5">
-                    <Car size={12} /> Categoria: <span className="text-zinc-400 font-medium">{veiculo.tipo}</span>
+                  <p className="text-xs text-zinc-500 mt-4 flex items-center gap-1.5% truncate">
+                    <Car size={12} className="text-zinc-600" /> Categoria: <span className="text-zinc-400 font-medium">{veiculo.tipo}</span>
                   </p>
                 )}
               </div>
 
-              {/* Botões de Ação Embutidos de Forma Elegante */}
+              {/* Botões de Ação */}
               <div className="flex gap-2 mt-6 pt-4 border-t border-zinc-800/40">
                 <button
                   onClick={() => openEdit(veiculo)}
@@ -252,10 +261,10 @@ export default function Frota() {
         </div>
       )}
 
-      {/* MODAL RESPONSIVO PREMIUM */}
+      {/* MODAL RESPONSIVO */}
       {modalOpen && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 transition-all animate-fadeIn">
-          <div className="bg-zinc-950 border border-zinc-800 p-6 sm:p-8 rounded-3xl w-full max-w-xl space-y-6 shadow-2xl relative">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 transition-all">
+          <div className="bg-zinc-950 border border-zinc-800 p-6 sm:p-8 rounded-3xl w-full max-w-xl space-y-6 shadow-2xl relative text-zinc-300">
             
             <button 
               onClick={() => setModalOpen(false)}
@@ -291,8 +300,9 @@ export default function Frota() {
                   value={form.status}
                   onChange={e => setForm({ ...form, status: e.target.value })}
                 >
-                  <option value="ativo">Ativo</option>
+                  <option value="ativo">Disponível (Ativo)</option>
                   <option value="manutencao">Em Manutenção</option>
+                  <option value="ocupado">Em Viagem (Ocupado)</option>
                   <option value="inativo">Inativo</option>
                 </select>
               </div>
