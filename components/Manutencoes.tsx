@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { Plus, Wrench, Calendar, DollarSign, ShieldAlert, Trash2 } from 'lucide-react'
+import { Plus, Wrench, Calendar, DollarSign, Trash2, CheckCircle, X } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
 interface Manutencao {
@@ -12,10 +12,17 @@ interface Manutencao {
   custo: number
   oficina: string
   status: string
+  veiculos: { placa: string; modelo: string } | { placa: string; modelo: string }[] | null
+}
+
+interface Veiculo {
+  id: number
+  placa: string
+  modelo: string
 }
 
 const INITIAL_FORM_STATE = {
-  veiculo_id: '',
+  veiculo_id: 0,
   descricao: '',
   data_manutencao: '',
   custo: '',
@@ -25,16 +32,15 @@ const INITIAL_FORM_STATE = {
 
 export default function Manutencoes() {
   const [manutencoes, setManutencoes] = useState<Manutencao[]>([])
+  const [veiculos, setVeiculos] = useState<Veiculo[]>([])
   const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
   const [editId, setEditId] = useState<number | null>(null)
-
-  // Usamos strings no form para melhor manipulação dos inputs numéricos vazios
   const [form, setForm] = useState(INITIAL_FORM_STATE)
 
   const isFetchingRef = useRef(false)
 
-  // Memoizando a busca para evitar loops de re-renderização
+  // Busca Principal incluindo dados do Veículo vinculado
   const fetchData = useCallback(async () => {
     if (isFetchingRef.current) return
     isFetchingRef.current = true
@@ -42,11 +48,14 @@ export default function Manutencoes() {
     try {
       const { data, error } = await supabase
         .from('manutencoes')
-        .select('*')
+        .select(`
+          id, veiculo_id, descricao, data_manutencao, custo, oficina, status,
+          veiculos ( placa, modelo )
+        `)
         .order('data_manutencao', { ascending: false })
 
       if (error) throw error
-      setManutencoes(data || [])
+      setManutencoes((data as unknown as Manutencao[]) || [])
     } catch (error) {
       console.error('Erro ao buscar manutenções:', error)
       alert('Não foi possível carregar o histórico de manutenções.')
@@ -56,17 +65,25 @@ export default function Manutencoes() {
     }
   }, [])
 
-  // Inicialização e Realtime
+  // Carrega lista auxiliar de veículos para o Select do formulário
+  useEffect(() => {
+    async function loadVeiculos() {
+      try {
+        const { data } = await supabase.from('veiculos').select('id, placa, modelo').order('modelo')
+        setVeiculos(data || [])
+      } catch (error) {
+        console.error('Erro ao carregar veículos:', error)
+      }
+    }
+    loadVeiculos()
+  }, [])
+
   useEffect(() => {
     fetchData()
 
     const channel = supabase
       .channel('manutencoes_realtime')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'manutencoes' },
-        () => fetchData()
-      )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'manutencoes' }, () => fetchData())
       .subscribe()
 
     return () => {
@@ -74,20 +91,29 @@ export default function Manutencoes() {
     }
   }, [fetchData])
 
-  function resetForm() {
-    setForm(INITIAL_FORM_STATE)
+  // Botão rápido para conclusão direta no Card
+  async function concluirManutencao(id: number) {
+    try {
+      const { error } = await supabase
+        .from('manutencoes')
+        .update({ status: 'concluida' })
+        .eq('id', id)
+
+      if (error) throw error
+      fetchData()
+    } catch (error) {
+      console.error('Erro ao concluir manutenção:', error)
+      alert('Não foi possível concluir a manutenção.')
+    }
   }
 
-  function openCreate() {
-    setEditId(null)
-    resetForm()
-    setModalOpen(true)
-  }
+  function resetForm() { setForm(INITIAL_FORM_STATE) }
+  function openCreate() { setEditId(null); resetForm(); setModalOpen(true); }
 
   function openEdit(m: Manutencao) {
     setEditId(m.id)
     setForm({
-      veiculo_id: String(m.veiculo_id),
+      veiculo_id: m.veiculo_id,
       descricao: m.descricao,
       data_manutencao: m.data_manutencao ? m.data_manutencao.substring(0, 10) : '',
       custo: String(m.custo),
@@ -97,15 +123,13 @@ export default function Manutencoes() {
     setModalOpen(true)
   }
 
-  // FUNÇÃO PARA SALVAR E TRATAR OS NÚMEROS
   async function saveManutencao() {
-    if (!form.veiculo_id) return alert('Por favor, informe o ID do veículo.')
+    if (!form.veiculo_id || form.veiculo_id === 0) return alert('Por favor, selecione o veículo.')
     if (!form.descricao.trim()) return alert('Por favor, informe a descrição.')
     if (!form.data_manutencao) return alert('Por favor, selecione a data.')
     if (!form.custo) return alert('Por favor, informe o custo.')
 
     try {
-      // Monta o payload convertendo os campos numéricos corretamente
       const payload = {
         veiculo_id: Number(form.veiculo_id),
         descricao: form.descricao,
@@ -116,7 +140,6 @@ export default function Manutencoes() {
       }
 
       let error
-
       if (editId) {
         const res = await supabase.from('manutencoes').update(payload).eq('id', editId)
         error = res.error
@@ -128,12 +151,10 @@ export default function Manutencoes() {
       if (error) throw error
 
       setModalOpen(false)
-      setEditId(null)
       resetForm()
       fetchData()
     } catch (error: any) {
-      console.error('Erro ao salvar manutenção:', error)
-      alert(`Erro ao salvar: ${error.message || 'Verifique as permissões do banco.'}`)
+      console.error(error)
     }
   }
 
@@ -143,10 +164,16 @@ export default function Manutencoes() {
       const { error } = await supabase.from('manutencoes').delete().eq('id', id)
       if (error) throw error
       fetchData()
-    } catch (error) {
-      console.error('Erro ao deletar:', error)
-      alert('Não foi possível excluir a manutenção.')
+    } catch (error) { console.error(error) }
+  }
+
+  const getVeiculoTexto = (m: Manutencao) => {
+    if (!m.veiculos) return `ID #${m.veiculo_id}`
+    if (Array.isArray(m.veiculos)) {
+      const target = m.veiculos[0]
+      return target ? `${target.modelo} (${target.placa})` : `ID #${m.veiculo_id}`
     }
+    return `${m.veiculos.modelo} (${m.veiculos.placa})`
   }
 
   const formatarData = (dataStr: string) => {
@@ -160,25 +187,25 @@ export default function Manutencoes() {
       {/* HEADER */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-black text-white">Manutenções</h2>
+          <h2 className="text-3xl font-black text-white tracking-tight">Manutenções</h2>
           <p className="text-zinc-500 mt-1">Histórico e controle de reparos da frota.</p>
         </div>
-        <button onClick={openCreate} className="bg-blue-600 hover:bg-blue-500 transition px-5 py-3 rounded-2xl font-bold flex items-center gap-2">
+        <button onClick={openCreate} className="bg-blue-600 hover:bg-blue-500 text-white transition-all px-5 py-3 rounded-2xl font-bold flex items-center gap-2 shadow-lg shadow-blue-600/10">
           <Plus size={18} /> Nova Manutenção
         </button>
       </div>
 
-      {loading && <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-8 text-zinc-400">Carregando manutenções...</div>}
+      {loading && <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-8 text-zinc-400 animate-pulse">Carregando manutenções...</div>}
 
       {/* GRID */}
       {!loading && (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {manutencoes.map((m) => (
-            <div key={m.id} className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 flex flex-col justify-between hover:border-zinc-700 transition">
+            <div key={m.id} className="bg-zinc-900 border border-zinc-800/80 rounded-3xl p-6 flex flex-col justify-between hover:border-zinc-700 transition duration-300 shadow-xl group">
               <div>
-                <div className="flex items-center justify-between border-b border-zinc-800 pb-3 mb-4">
-                  <span className="text-zinc-500 font-bold text-sm">Veículo ID #{m.veiculo_id}</span>
-                  <span className={`px-3 py-1 rounded-xl text-xs font-black uppercase ${
+                <div className="flex items-center justify-between border-b border-zinc-800/60 pb-3 mb-4">
+                  <span className="text-white font-bold text-sm truncate max-w-[170px]">{getVeiculoTexto(m)}</span>
+                  <span className={`px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider ${
                     m.status === 'concluida' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
                     m.status === 'pendente' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' :
                     'bg-red-500/10 text-red-400 border border-red-500/20'
@@ -191,98 +218,125 @@ export default function Manutencoes() {
                   <div className="flex items-start gap-2">
                     <Wrench size={16} className="text-blue-500 mt-1 flex-shrink-0" />
                     <div>
-                      <p className="text-xs text-zinc-500 font-medium uppercase">Descrição</p>
-                      <p className="text-white font-bold text-base">{m.descricao}</p>
+                      <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">Descrição</p>
+                      <p className="text-white font-bold text-base leading-snug">{m.descricao}</p>
                     </div>
                   </div>
                 </div>
 
-                <div className="bg-zinc-950/40 rounded-2xl p-4 space-y-2 text-sm text-zinc-400 border border-zinc-800/50">
+                <div className="bg-zinc-950/40 rounded-2xl p-4 space-y-2 text-sm text-zinc-400 border border-zinc-800/40">
                   <p className="flex justify-between">
-                    <span className="flex items-center gap-1"><Calendar size={14} /> Data:</span> 
-                    <span className="text-white font-semibold">{formatarData(m.data_manutencao)}</span>
+                    <span className="flex items-center gap-1.5 text-zinc-500 text-xs font-medium"><Calendar size={14} /> Data</span> 
+                    <span className="text-white font-semibold font-mono text-xs">{formatarData(m.data_manutencao)}</span>
                   </p>
                   <p className="flex justify-between">
-                    <span className="flex items-center gap-1"><DollarSign size={14} /> Custo:</span> 
-                    <span className="text-emerald-400 font-bold">R$ {Number(m.custo).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                    <span className="flex items-center gap-1.5 text-zinc-500 text-xs font-medium"><DollarSign size={14} /> Custo</span> 
+                    <span className="text-emerald-400 font-bold font-mono text-xs">R$ {Number(m.custo).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                   </p>
                   <p className="flex justify-between">
-                    <span>Oficina:</span> 
-                    <span className="text-white font-semibold truncate max-w-[180px]">{m.oficina}</span>
+                    <span className="text-zinc-500 text-xs font-medium">Oficina</span> 
+                    <span className="text-white font-semibold text-xs truncate max-w-[160px]">{m.oficina}</span>
                   </p>
                 </div>
               </div>
 
-              {/* AÇÕES */}
-              <div className="flex gap-2 mt-6 border-t border-zinc-800/60 pt-4">
-                <button onClick={() => openEdit(m)} className="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-4 py-2.5 rounded-xl text-xs font-bold transition flex-1">
-                  Editar
-                </button>
-                <button onClick={() => deleteManutencao(m.id)} className="bg-red-950/40 hover:bg-red-900/60 text-red-400 border border-red-900/30 px-3 py-2.5 rounded-xl text-xs font-bold transition flex-shrink-0">
-                  <Trash2 size={14} />
-                </button>
+              {/* LISTA DE AÇÕES COM CONCLUÍDA */}
+              <div className="space-y-2 mt-6">
+                {m.status !== 'concluida' && (
+                  <button
+                    onClick={() => concluirManutencao(m.id)}
+                    className="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-2.5 rounded-xl text-xs font-black transition flex items-center justify-center gap-2 shadow-lg shadow-emerald-900/10"
+                  >
+                    <CheckCircle size={14} />
+                    Concluir Manutenção
+                  </button>
+                )}
+
+                <div className="flex gap-2">
+                  <button onClick={() => openEdit(m)} className="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-4 py-2 rounded-xl text-xs font-bold transition flex-1">
+                    Editar
+                  </button>
+                  <button onClick={() => deleteManutencao(m.id)} className="bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/10 px-3 py-2 rounded-xl text-xs font-bold transition flex-shrink-0">
+                    <Trash2 size={14} />
+                  </button>
+                </div>
               </div>
             </div>
           ))}
         </div>
       )}
 
-      {/* MODAL */}
+      {/* MODAL RESPONSIVO */}
       {modalOpen && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-zinc-900 p-6 rounded-3xl w-full max-w-xl space-y-4 my-auto border border-zinc-800">
-            <h2 className="text-2xl font-black text-white">
-              {editId ? 'Editar Manutenção' : 'Nova Manutenção'}
-            </h2>
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 transition-all">
+          <div className="bg-zinc-950 p-6 sm:p-8 rounded-3xl w-full max-w-xl space-y-6 border border-zinc-800 shadow-2xl relative text-zinc-300">
+            
+            <button 
+              onClick={() => { setModalOpen(false); resetForm(); }}
+              className="absolute top-4 right-4 text-zinc-500 hover:text-white transition"
+            >
+              <X size={20} />
+            </button>
 
-            <div className="space-y-3">
-              <div>
-                <label className="text-zinc-400 text-xs ml-1">ID do Veículo *</label>
-                <input
-                  type="number"
-                  className="w-full p-3 rounded-xl bg-zinc-800 text-white border border-zinc-700 focus:outline-none focus:border-blue-500"
-                  placeholder="Ex: 3"
-                  value={form.veiculo_id}
-                  onChange={e => setForm({ ...form, veiculo_id: e.target.value })}
-                />
+            <div>
+              <h2 className="text-2xl font-black text-white tracking-tight">
+                {editId ? 'Editar Manutenção' : 'Nova Manutenção'}
+              </h2>
+              <p className="text-zinc-500 text-xs mt-1">Insira os dados do chamado técnico para controle financeiro e operacional.</p>
+            </div>
+
+            <div className="space-y-4">
+              {/* SELECT DO VEÍCULO (Substituindo o Input de ID) */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Veículo *</label>
+                <select 
+                  className="w-full p-3 rounded-xl bg-zinc-900 text-white border border-zinc-800 focus:outline-none focus:border-blue-500 transition text-sm font-medium" 
+                  value={form.veiculo_id} 
+                  onChange={e => setForm({ ...form, veiculo_id: Number(e.target.value) })}
+                >
+                  <option value={0}>Selecione um veículo da frota</option>
+                  {veiculos.map((v) => (
+                    <option key={v.id} value={v.id}>🚛 {v.modelo} — ({v.placa})</option>
+                  ))}
+                </select>
               </div>
 
-              <div>
-                <label className="text-zinc-400 text-xs ml-1">Descrição do Serviço *</label>
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Descrição do Serviço *</label>
                 <input
-                  className="w-full p-3 rounded-xl bg-zinc-800 text-white border border-zinc-700 focus:outline-none focus:border-blue-500"
-                  placeholder="Ex: Troca de óleo e filtros"
+                  className="w-full p-3 rounded-xl bg-zinc-900 text-white border border-zinc-800 focus:outline-none focus:border-blue-500 transition text-sm font-medium"
+                  placeholder="Ex: Troca de pastilhas de freio e óleo"
                   value={form.descricao}
                   onChange={e => setForm({ ...form, descricao: e.target.value })}
                 />
               </div>
 
-              <div>
-                <label className="text-zinc-400 text-xs ml-1">Oficina / Fornecedor</label>
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Oficina / Fornecedor</label>
                 <input
-                  className="w-full p-3 rounded-xl bg-zinc-800 text-white border border-zinc-700 focus:outline-none focus:border-blue-500"
-                  placeholder="Ex: Oficina Mecânica Central"
+                  className="w-full p-3 rounded-xl bg-zinc-900 text-white border border-zinc-800 focus:outline-none focus:border-blue-500 transition text-sm font-medium"
+                  placeholder="Ex: Auto Mecânica Diesel Central"
                   value={form.oficina}
                   onChange={e => setForm({ ...form, oficina: e.target.value })}
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-zinc-400 text-xs ml-1">Data da Manutenção *</label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Data da Manutenção *</label>
                   <input
                     type="date"
-                    className="w-full p-3 rounded-xl bg-zinc-800 text-white border border-zinc-700 focus:outline-none focus:border-blue-500"
+                    className="w-full p-3 rounded-xl bg-zinc-900 text-white border border-zinc-800 focus:outline-none focus:border-blue-500 transition text-sm font-mono"
                     value={form.data_manutencao}
                     onChange={e => setForm({ ...form, data_manutencao: e.target.value })}
                   />
                 </div>
-                <div>
-                  <label className="text-zinc-400 text-xs ml-1">Custo Total (R$) *</label>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Custo Total (R$) *</label>
                   <input
                     type="number"
                     step="0.01"
-                    className="w-full p-3 rounded-xl bg-zinc-800 text-white border border-zinc-700 focus:outline-none focus:border-blue-500"
+                    className="w-full p-3 rounded-xl bg-zinc-900 text-white border border-zinc-800 focus:outline-none focus:border-blue-500 transition text-sm font-mono"
                     placeholder="0.00"
                     value={form.custo}
                     onChange={e => setForm({ ...form, custo: e.target.value })}
@@ -290,10 +344,10 @@ export default function Manutencoes() {
                 </div>
               </div>
 
-              <div>
-                <label className="text-zinc-400 text-xs ml-1">Status</label>
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Status Operacional</label>
                 <select
-                  className="w-full p-3 rounded-xl bg-zinc-800 text-white border border-zinc-700 focus:outline-none focus:border-blue-500"
+                  className="w-full p-3 rounded-xl bg-zinc-900 text-white border border-zinc-800 focus:outline-none focus:border-blue-500 transition text-sm font-medium"
                   value={form.status}
                   onChange={e => setForm({ ...form, status: e.target.value })}
                 >
@@ -304,16 +358,16 @@ export default function Manutencoes() {
               </div>
             </div>
 
-            <div className="flex justify-end gap-2 pt-4 border-t border-zinc-800">
+            <div className="flex justify-end gap-3 pt-4 border-t border-zinc-900">
               <button
                 onClick={() => { setModalOpen(false); resetForm(); }}
-                className="px-5 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl font-medium transition"
+                className="px-5 py-2.5 bg-zinc-900 hover:bg-zinc-850 text-zinc-400 hover:text-white rounded-xl font-medium transition text-sm"
               >
                 Cancelar
               </button>
               <button
                 onClick={saveManutencao}
-                className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-medium transition"
+                className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold transition text-sm shadow-lg shadow-blue-600/10"
               >
                 Salvar
               </button>
