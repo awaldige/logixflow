@@ -195,34 +195,10 @@ logixflow/
 # 📸 Capturas de Tela
 
 ## Dashboard
+<img width="1347" height="641" alt="viagens" src="https://github.com/user-attachments/assets/42cc15db-1519-4d35-ba2a-e0cbc154ea45" />
+<img width="1352" height="645" alt="dashboard" src="https://github.com/user-attachments/assets/3504a6c8-ae4b-49d1-8da2-88242c0dee6d" />
+<img width="1331" height="631" alt="manutencoes" src="https://github.com/user-attachments/assets/6883e41d-06f1-427c-9aaf-d9cbe6626f0d" />
 
-Adicione uma imagem em:
-
-```text
-public/screenshots/dashboard.png
-```
-
-```markdown
-![Dashboard](./public/screenshots/dashboard.png)
-```
-
----
-
-## Viagens
-
-```markdown
-![Viagens](./public/screenshots/viagens.png)
-```
-
----
-
-## Manutenções
-
-```markdown
-![Manutenções](./public/screenshots/manutencoes.png)
-```
-
----
 
 # 🛠️ Instalação
 
