@@ -1,3 +1,5 @@
+'use client'
+
 interface CardProps {
   titulo: string
   valor: number
@@ -13,6 +15,23 @@ export default function Card({
   descricao,
   icone
 }: CardProps) {
+
+  // 🇧🇷 Função para formatar o número se ele for um KPI financeiro
+  const formatarValor = (val: number) => {
+    const titulosFinanceiros = ['custo total', 'manutenção', 'combustível', 'custo por veículo', 'custo']
+    const ehFinanceiro = titulosFinanceiros.includes(titulo.toLowerCase().trim())
+
+    if (ehFinanceiro) {
+      return new Intl.NumberFormat('pt-BR', {
+        style: 'currency',
+        currency: 'BRL'
+      }).format(val)
+    }
+
+    // Se não for financeiro (ex: quantidade de veículos), apenas formata com separador de milhar se necessário
+    return new Intl.NumberFormat('pt-BR').format(val)
+  }
+
   return (
     <div className="
       bg-zinc-900
@@ -27,7 +46,6 @@ export default function Card({
 
       {/* HEADER */}
       <div className="flex items-center justify-between">
-
         <p className="text-zinc-500 text-sm uppercase tracking-wider">
           {titulo}
         </p>
@@ -37,12 +55,11 @@ export default function Card({
             {icone}
           </div>
         )}
-
       </div>
 
-      {/* VALOR */}
+      {/* VALOR FORMATADO INTELIGENTE */}
       <h2 className={`text-4xl font-black mt-3 ${cor}`}>
-        {valor}
+        {formatarValor(valor)}
       </h2>
 
       {/* DESCRIÇÃO (opcional) */}
