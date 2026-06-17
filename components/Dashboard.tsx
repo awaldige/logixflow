@@ -27,21 +27,13 @@ export default function Dashboard({
   const abastecimentos = Number(totalAbastecimentos || 0)
   const viagens = Number(totalViagens || 0)
 
-  // 🔍 Valores financeiros numéricos brutos
+  // 🔍 Mantendo valores puramente numéricos para o TypeScript não reclamar
   const custoManutencao = Number(custoTotalManutencao || 0)
   const custoCombustivel = Number(custoTotalCombustivel || 0)
   const custoTotal = custoManutencao + custoCombustivel
 
-  // Custo médio bruto por veículo da frota
+  // Custo médio por veículo da frota (passa o número puro, o Card resolve a dízima)
   const mediaCustoPorVeiculo = veiculos > 0 ? custoTotal / veiculos : 0
-
-  // 🇧🇷 Função auxiliar para formatar no padrão de moeda real (R$ 1.384,84)
-  const formatarMoeda = (valor: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
-    }).format(valor)
-  }
 
   return (
     <div className="space-y-8">
@@ -55,33 +47,33 @@ export default function Dashboard({
         </p>
       </div>
 
-      {/* KPIs FINANCEIROS FORMATADOS */}
+      {/* KPIs FINANCEIROS REAIS (Passando number puro) */}
       <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
 
         <Card
           titulo="Custo Total"
-          valor={formatarMoeda(custoTotal)} // Transforma em R$
+          valor={custoTotal}
           cor="text-red-400"
           descricao="Manutenção + combustível"
         />
 
         <Card
           titulo="Manutenção"
-          valor={formatarMoeda(custoManutencao)} // Transforma em R$
+          valor={custoManutencao}
           cor="text-yellow-400"
           descricao="Gastos com oficina"
         />
 
         <Card
           titulo="Combustível"
-          valor={formatarMoeda(custoCombustivel)} // Transforma em R$
+          valor={custoCombustivel}
           cor="text-emerald-400"
           descricao="Abastecimentos"
         />
 
         <Card
           titulo="Custo por Veículo"
-          valor={formatarMoeda(mediaCustoPorVeiculo)} // Corrige o 1384.8375 para R$ 1.384,84
+          valor={mediaCustoPorVeiculo}
           cor="text-blue-400"
           descricao="Média operacional"
         />
